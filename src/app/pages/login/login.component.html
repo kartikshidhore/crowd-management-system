@@ -1,0 +1,59 @@
+<div class="login-page-container">
+  <div class="background-overlay"></div>
+
+  <div class="content-wrapper">
+    <div class="welcome-section">
+      <h1 class="mat-headline-3">Welcome to the        Crowd Management System</h1>
+    </div>
+
+    <mat-card class="login-card mat-elevation-z10">
+      <mat-card-header class="login-card-header">
+        <div class="logo-container">
+          <img src="Kloudspot_Horizontal.svg" alt="Kloudspot" class="logo"> 
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="loginForm" class="login-form" (ngSubmit)="OnSubmit()">
+          
+          <mat-form-field appearance="outline" class="w-100">
+            <mat-label>Log In *</mat-label> 
+            <input matInput formControlName="username" required>
+            <mat-error *ngIf="loginForm.get('username')?.hasError('required')">
+              Username is required
+            </mat-error>
+          </mat-form-field>
+      
+          <mat-form-field appearance="outline" class="w-100">
+            <mat-label>Password *</mat-label>
+            <input matInput 
+                   formControlName="password" 
+                   [type]="showPassword ? 'text' : 'password'" 
+                   required>
+            
+            <button mat-icon-button matSuffix (click)="togglePassword()" type="button" [attr.aria-label]="'Hide password'">
+              <mat-icon>{{showPassword ? 'visibility' : 'visibility_off'}}</mat-icon>
+            </button>
+            <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
+              Password is required
+            </mat-error>
+          </mat-form-field>
+          
+          <p *ngIf="errorMessage" class="error-message"> {{ errorMessage }}</p>
+      
+          <mat-card-actions class="login-card-actions">
+            <button mat-raised-button 
+                    color="primary" 
+                    class="login-button w-100" 
+                    type="submit"
+                    [disabled]="loginForm.invalid || isLoading"> 
+              <span *ngIf="!isLoading">Login</span>
+              <span *ngIf="isLoading">Logging in...</span>
+            </button>
+          </mat-card-actions>
+      
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

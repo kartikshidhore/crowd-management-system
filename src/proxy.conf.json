@@ -1,0 +1,15 @@
+{
+    "/api": {
+        "target": "https://hiring-dev.internal.kloudspot.com",
+        "secure": false,
+        "changeOrigin": true,
+        "logLevel": "debug"
+    },
+    "/socket.io": {
+        "target": "https://hiring-dev.internal.kloudspot.com",
+        "secure": false,
+        "changeOrigin": true,
+        "ws": true,
+        "logLevel": "debug"
+    }
+}

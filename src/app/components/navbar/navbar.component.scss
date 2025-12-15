@@ -1,0 +1,211 @@
+// --- COLORS ---
+$teal: #009688;
+$teal-dark: #0A5D5C;
+$bg-white: #ffffff;
+$text-dark: #333;
+$text-light: #666;
+
+// --- NAVBAR ---
+.main-navbar {
+  background: $bg-white;
+  color: $text-dark;
+  height: 64px;
+  padding: 0 30px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+// --- LEFT SECTION ---
+.navbar-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  .brand-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $text-dark;
+    letter-spacing: 0.5px;
+  }
+
+  .divider {
+    color: #ccc;
+    font-size: 1.5rem;
+    font-weight: 300;
+  }
+
+  .site-selector-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .site-selector {
+    min-width: 240px;
+    
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      padding-bottom: 0;
+    }
+
+    ::ng-deep .mdc-notched-outline {
+      border-color: #e0e0e0;
+    }
+
+    ::ng-deep .mat-mdc-select-value {
+      font-weight: 500;
+      color: $text-dark;
+      font-size: 0.95rem;
+    }
+
+    ::ng-deep .mat-mdc-form-field-flex {
+      height: 42px;
+      align-items: center;
+    }
+
+    .location-icon {
+      color: $teal;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+    }
+  }
+}
+
+// --- RIGHT SECTION ---
+.navbar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 15px;
+
+  .lang-toggle {
+    cursor: pointer;
+    
+    .toggle-track {
+      position: relative;
+      width: 70px;
+      height: 36px;
+      background: #e0e0e0;
+      border-radius: 18px;
+      border: 2px solid #d0d0d0;
+      padding: 2px;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      
+      .toggle-thumb {
+        position: absolute;
+        left: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: left 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+        
+        .en-icon {
+          width: 32px;
+          height: 32px;
+          object-fit: cover;
+          display: block;
+          border-radius: 50%;
+        }
+      }
+      
+      .arabic-text {
+        position: absolute;
+        right: 10px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #666;
+        user-select: none;
+        line-height: 1;
+      }
+    }
+    
+    &:hover .toggle-track {
+      background: #d5d5d5;
+    }
+  }
+
+  .alerts-btn {
+    color: $text-dark;
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .bell-icon {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #f44336;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+  }
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+}
+
+// --- RESPONSIVE ---
+@media (max-width: 960px) {
+  .main-navbar {
+    padding: 0 15px;
+  }
+
+  .navbar-center .site-selector {
+    min-width: 180px;
+  }
+
+  .navbar-left .brand-text {
+    font-size: 1rem;
+  }
+}

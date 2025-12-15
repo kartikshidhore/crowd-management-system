@@ -1,0 +1,177 @@
+<mat-sidenav-container class="sidenav-container">
+  
+  <mat-sidenav mode="side" [opened]="true" [disableClose]="true" #sidenav [class.collapsed]="!sidebarOpen" class="app-sidenav">
+    <div class="sidebar-header">
+      <div class="logo-area" *ngIf="sidebarOpen">
+         <img src="Kloudspot_Horizontal.svg" alt="Kloudspot" class="brand-logo">
+      </div>
+      <button mat-icon-button class="toggle-btn" (click)="toggleSidebar()">
+        <mat-icon>menu</mat-icon>
+      </button>
+    </div>
+    
+    <mat-nav-list>
+      <a mat-list-item class="nav-item active" routerLink="/dashboard">
+        <img src="home_logo.svg" alt="Overview" class="nav-icon" matListItemIcon>
+        <span matListItemTitle *ngIf="sidebarOpen">Overview</span>
+      </a>
+      <a mat-list-item class="nav-item" routerLink="/crowd-entries">
+        <img src="crowd_logo.svg" alt="Crowd Entries" class="nav-icon" matListItemIcon>
+        <span matListItemTitle *ngIf="sidebarOpen">Crowd Entries</span>
+      </a>
+    </mat-nav-list>
+
+    <div class="logout-area">
+      <button mat-button class="logout-btn" (click)="logout()">
+        <mat-icon>power_settings_new</mat-icon> 
+        <span *ngIf="sidebarOpen">Logout</span>
+      </button>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main-content" [class.loading]="isLoading">
+    
+    <!-- Top Navbar inside main content -->
+    <app-navbar></app-navbar>
+    
+    <!-- Loader Overlay -->
+    <div class="loader-overlay" *ngIf="isLoading">
+      <mat-spinner diameter="60"></mat-spinner>
+    </div>
+    
+    <div class="dashboard-body">
+      <div class="page-header">
+        <h1>Overview</h1>
+        <div class="date-picker-wrapper">
+          <button mat-stroked-button class="date-picker-button" (click)="picker.open()">
+            <mat-icon>calendar_today</mat-icon>
+            <span>{{ dateDisplayText }}</span>
+          </button>
+          <mat-form-field class="hidden-date-input">
+            <input matInput 
+                   [matDatepicker]="picker" 
+                   [(ngModel)]="selectedDate"
+                   [max]="maxDate"
+                   (dateChange)="onDateChange($event.value)">
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <h3 class="section-title">Occupancy</h3>
+      
+      <div class="stats-grid">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-label">Live Occupancy</div>
+            <div class="stat-value">{{ liveOccupancy }}</div>
+            <div class="stat-trend" [ngClass]="occupancyTrend.direction">
+              <mat-icon>{{ occupancyTrend.direction === 'up' ? 'trending_up' : 'trending_down' }}</mat-icon> 
+              {{ occupancyTrend.percentage }}% {{ occupancyTrend.direction === 'up' ? 'More' : 'Less' }} than yesterday
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-label">Today's Footfall</div>
+            <div class="stat-value">{{ todaysFootfall | number }}</div>
+            <div class="stat-trend" [ngClass]="footfallTrend.direction">
+              <mat-icon>{{ footfallTrend.direction === 'up' ? 'trending_up' : 'trending_down' }}</mat-icon> 
+              {{ footfallTrend.percentage }}% {{ footfallTrend.direction === 'up' ? 'More' : 'Less' }} than yesterday
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <div class="stat-label">Avg Dwell Time</div>
+            <div class="stat-value">{{ avgDwellTime }}</div>
+            <div class="stat-trend" [ngClass]="dwellTimeTrend.direction">
+              <mat-icon>{{ dwellTimeTrend.direction === 'up' ? 'trending_up' : 'trending_down' }}</mat-icon> 
+              {{ dwellTimeTrend.percentage }}% {{ dwellTimeTrend.direction === 'up' ? 'More' : 'Less' }} than yesterday
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <div class="chart-section-full">
+        <mat-card class="chart-card">
+           <div class="chart-header">
+             <h3>Overall Occupancy</h3>
+             <div class="custom-legend">
+               <div class="legend-item">
+                 <span class="legend-dot" style="background-color: #009688;"></span>
+                 <span class="legend-label">Occupancy</span>
+               </div>
+             </div>
+           </div>
+           <div class="chart-wrapper-large">
+             <canvas baseChart 
+               [data]="occupancyChartData" 
+               [options]="occupancyChartOptions" 
+               [type]="'line'">
+             </canvas>
+           </div>
+        </mat-card>
+      </div>
+
+      <div class="demographics-section">
+        <h3>Demographics</h3>
+        <div class="split-grid">
+           <mat-card class="chart-card">
+             <h4>Chart of Demographics</h4>
+             <div class="donut-wrapper">
+                <div class="center-text">
+                  <span class="label">Total Crowd</span>
+                  <span class="val">100%</span>
+                </div>
+                <canvas baseChart 
+                   [data]="donutChartData" 
+                   [type]="'doughnut'" 
+                   [options]="{ cutout: '75%', plugins: { legend: { display: false } } }">
+                </canvas>
+             </div>
+             <div class="legend">
+               <div class="item">
+                 <img src="Frame 1171277688.svg" alt="Male" class="legend-icon">
+                 <span>{{ malePercentage }}% Males</span>
+               </div>
+               <div class="item">
+                 <img src="Frame 1171277689.svg" alt="Female" class="legend-icon">
+                 <span>{{ femalePercentage }}% Females</span>
+               </div>
+             </div>
+           </mat-card>
+
+           <mat-card class="chart-card">
+             <div class="chart-header">
+               <h4>Demographics Analysis</h4>
+               <div class="custom-legend">
+                 <div class="legend-item">
+                   <span class="legend-dot" style="background-color: #2A7F7D;"></span>
+                   <span class="legend-label">Male</span>
+                 </div>
+                 <div class="legend-item">
+                   <span class="legend-dot" style="background-color: #47B2B0;"></span>
+                   <span class="legend-label">Female</span>
+                 </div>
+               </div>
+             </div>
+             <div class="chart-wrapper-medium">
+               <canvas baseChart 
+                 [data]="demographicsLineChartData" 
+                 [options]="demographicsLineChartOptions" 
+                 [type]="'line'">
+               </canvas>
+             </div>
+           </mat-card>
+        </div>
+      </div>
+
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
+<!-- Alerts Sidebar -->
+<app-alerts-sidebar></app-alerts-sidebar>

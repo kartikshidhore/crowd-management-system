@@ -1,0 +1,35 @@
+<div class="alerts-overlay" *ngIf="isOpen" (click)="closeSidebar()"></div>
+
+<div class="alerts-sidebar" [class.open]="isOpen">
+  <div class="sidebar-header">
+    <h2>Alerts</h2>
+    <button mat-icon-button (click)="closeSidebar()" class="close-btn">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="alerts-list">
+    <div *ngFor="let alert of alerts" class="alert-item" [class.newest]="alert.isNewest">
+      <div class="alert-date">{{ formatDate(alert.timestamp) }}</div>
+      <div class="alert-content">
+        <div class="alert-info">
+          <div class="alert-name">{{ alert.personName }} {{ alert.action }}</div>
+          <div class="alert-location">
+            <mat-icon>place</mat-icon>
+            <span>{{ alert.zoneName }}</span>
+          </div>
+        </div>
+        <div class="alert-severity">
+          <span class="severity-badge" [ngClass]="getSeverityClass(alert.severity)">
+            {{ alert.severity | titlecase }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="alerts.length === 0" class="no-alerts">
+      <mat-icon>notifications_none</mat-icon>
+      <p>No alerts yet</p>
+    </div>
+  </div>
+</div>

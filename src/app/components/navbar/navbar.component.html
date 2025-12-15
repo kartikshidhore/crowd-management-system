@@ -1,0 +1,44 @@
+<mat-toolbar class="main-navbar">
+  <!-- Left: Crowd Solutions Text + Site Selector -->
+  <div class="navbar-left">
+    <span class="brand-text">Crowd Solutions</span>
+    <span class="divider">|</span>
+    <div class="site-selector-wrapper">
+      <mat-form-field appearance="outline" class="site-selector">
+        <mat-icon matPrefix class="location-icon">location_on</mat-icon>
+        <mat-select 
+          [(value)]="selectedSiteId" 
+          (selectionChange)="onSiteChange($event.value)"
+          [placeholder]="sites.length === 0 ? 'Loading...' : 'Select Site'">
+          <mat-option *ngFor="let site of sites" [value]="site.siteId">
+            {{ site.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- Right: Controls -->
+  <div class="navbar-right">
+    <!-- Language Toggle Switch -->
+    <div class="lang-toggle">
+      <div class="toggle-track">
+        <div class="toggle-thumb">
+          <img src="En part.svg" alt="English" class="en-icon">
+        </div>
+        <span class="arabic-text">ع</span>
+      </div>
+    </div>
+
+    <!-- Alerts Bell with Badge -->
+    <button mat-icon-button class="alerts-btn" (click)="toggleAlerts()">
+      <img src="Bell.svg" alt="Notifications" class="bell-icon">
+      <span class="badge" *ngIf="unseenAlertsCount > 0"></span>
+    </button>
+
+    <!-- User Avatar with Tooltip -->
+    <div class="user-avatar" [matTooltip]="userEmail">
+      {{ userInitial }}
+    </div>
+  </div>
+</mat-toolbar>
