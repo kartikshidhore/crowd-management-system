@@ -20,11 +20,10 @@ export class AuthService {
         mergeMap((error, index) => {
           const retryCount = index + 1;
           if (retryCount > 2) {
-            console.error('XXX Login failed after 2 retries');
+            console.error('Login failed after 2 retries');
             return throwError(() => error);
           }
           const delayMs = 1000 * Math.pow(2, index);
-          console.log(`--- Login attempt ${retryCount}/2 - waiting ${delayMs / 1000}s`);
           return timer(delayMs);
         })
       )),

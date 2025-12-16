@@ -98,7 +98,7 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     // Subscribe to cached data
     this.cacheSub = this.cacheService.cache$.subscribe(cachedData => {
       if (cachedData) {
-        console.log(' Using cached entry-exit data');
+        console.log('Using cached entry-exit data');
         this.processEntryExitData(cachedData);
       }
     });
@@ -114,7 +114,7 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
         
         if (siteChanged) {
           // Clear cache when site changes
-          console.log(' Site changed, clearing cache and loading fresh data');
+          console.log('Site changed, clearing cache and loading fresh data');
           this.cacheService.clearCache();
           this.pageIndex = 0;
           this.loadEntryExitData(1);
@@ -122,10 +122,10 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
           // Initial load - check for cached data
           const cachedData = this.cacheService.getCachedData();
           if (cachedData && cachedData.siteId === site.siteId) {
-            console.log(' Found cached data for current site');
+            console.log('Found cached data for current site');
             this.processEntryExitData(cachedData);
           } else {
-            console.log(' No cache, loading fresh data');
+            console.log('📡 No cache, loading fresh data');
             this.loadEntryExitData(1);
           }
         }
@@ -134,17 +134,17 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
   }
 
   loadEntryExitData(pageNumber: number = 1) {
-    console.log(' Loading Entry-Exit data - Page:', pageNumber);
+    console.log('Loading Entry-Exit data - Page:', pageNumber);
     this.isLoading = true;
     
     this.cacheService.loadData(this.currentSiteId, this.selectedDate, pageNumber, this.pageSize).subscribe({
       next: (response) => {
-        console.log('✅ Entry-Exit data loaded');
+        console.log('Entry-Exit data loaded');
         this.processEntryExitData(response);
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('❌ Entry-Exit API failed:', err);
+        console.error('Entry-Exit API failed:', err);
         this.allRecords = [];
         this.displayedRecords = [];
         this.totalRecords = 0;
@@ -158,14 +158,14 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     // Process API response and map to table records
     const records = response.records || [];
     
-    console.log(' API Response:', {
+    console.log('📋 API Response:', {
       totalRecords: response.totalRecords,
       totalPages: response.totalPages,
       pageNumber: response.pageNumber,
       pageSize: response.pageSize,
       recordCount: records.length
     });
-    console.log(' First record sample:', records[0]);
+    console.log('📋 First record sample:', records[0]);
     
     // Map records with correct field names from API
     this.displayedRecords = records.map((record: any) => {
@@ -197,7 +197,7 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     this.pageIndex = (response.pageNumber || 1) - 1; // Convert to 0-based
     this.pageSize = response.pageSize || 50;
     
-    console.log('✅ Displaying', this.displayedRecords.length, 'records (Page', this.pageIndex + 1, 'of', this.totalPages, ')');
+    console.log('Displaying', this.displayedRecords.length, 'records (Page', this.pageIndex + 1, 'of', this.totalPages, ')');
   }
 
   updateDisplayedRecords() {
@@ -288,7 +288,7 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     this.selectedDate = date;
     this.updateDateDisplayText();
     
-    console.log(' Date changed to:', date.toLocaleDateString());
+    console.log('Date changed to:', date.toLocaleDateString());
     
     // Clear cache and reset to first page
     this.cacheService.clearCache();
@@ -327,7 +327,7 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    console.log(' User logging out from crowd entries');
+    console.log('👋 User logging out from crowd entries');
     // Trigger cleanup across all components
     this.cleanupService.triggerLogout();
     // Call auth service logout

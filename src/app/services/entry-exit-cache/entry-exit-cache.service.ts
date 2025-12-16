@@ -20,11 +20,11 @@ export class EntryExitCacheService {
    */
   preloadData(siteId: string, selectedDate: Date = new Date()): void {
     if (this.isLoadingSubject.value) {
-      console.log(' Already loading entry-exit data, skipping preload');
+      console.log('⏳ Already loading entry-exit data, skipping preload');
       return;
     }
 
-    console.log('/// Preloading entry-exit data for siteId:', siteId);
+    console.log('Preloading entry-exit data for siteId:', siteId);
     this.isLoadingSubject.next(true);
 
     const payload = this.createPayload(siteId, selectedDate);
@@ -33,12 +33,12 @@ export class EntryExitCacheService {
       .pipe(
         tap({
           next: (data) => {
-            console.log('✅ Entry-exit data preloaded successfully:', data.totalRecords, 'total records');
+            console.log('Entry-exit data preloaded successfully:', data.totalRecords, 'total records');
             this.cacheSubject.next(data);
             this.isLoadingSubject.next(false);
           },
           error: (err) => {
-            console.error('❌ Error preloading entry-exit data:', err);
+            console.error('Error preloading entry-exit data:', err);
             this.isLoadingSubject.next(false);
           }
         })
@@ -50,7 +50,7 @@ export class EntryExitCacheService {
    * Load fresh data with pagination (clears cache and reloads)
    */
   loadData(siteId: string, selectedDate: Date = new Date(), pageNumber: number = 1, pageSize: number = 50): Observable<any> {
-    console.log('/// Loading fresh entry-exit data - Page:', pageNumber);
+    console.log('Loading fresh entry-exit data - Page:', pageNumber);
     this.isLoadingSubject.next(true);
 
     const payload = this.createPayload(siteId, selectedDate);
@@ -58,7 +58,7 @@ export class EntryExitCacheService {
     return this.analyticsService.getEntryExitPaginated(payload, pageNumber, pageSize).pipe(
       tap({
         next: (data) => {
-          console.log('✅ Entry-exit data loaded successfully - Page', pageNumber, 'of', data.totalPages);
+          console.log('Entry-exit data loaded successfully - Page', pageNumber, 'of', data.totalPages);
           // Only cache first page for instant display
           if (pageNumber === 1) {
             this.cacheSubject.next(data);
@@ -66,7 +66,7 @@ export class EntryExitCacheService {
           this.isLoadingSubject.next(false);
         },
         error: (err) => {
-          console.error('❌ Error loading entry-exit data:', err);
+          console.error('Error loading entry-exit data:', err);
           this.isLoadingSubject.next(false);
         }
       })
@@ -84,7 +84,7 @@ export class EntryExitCacheService {
    * Clear cache
    */
   clearCache(): void {
-    console.log(' Clearing entry-exit cache');
+    console.log('Clearing entry-exit cache');
     this.cacheSubject.next(null);
   }
 

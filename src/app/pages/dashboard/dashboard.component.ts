@@ -72,32 +72,13 @@ export class Dashboard implements OnInit, OnDestroy {
   avgDwellTime = '--';
   liveOccupancy = 0;
   
-  /**
-   * TREND CALCULATION SYSTEM
-   * 
-   * Compares today's metrics with yesterday's to show percentage changes.
-   * 
-   * OPTIMIZATION FEATURES:
-   * - Caching: Yesterday's data cached per date to prevent redundant API calls
-   * - Edge Cases: Handles NaN, division by zero, first day, extreme outliers
-   * - Performance: Single API call per date, no recalculation on socket updates
-   * - Memory: Cache cleared on date change and component destroy
-   * 
-   * CALCULATION LOGIC:
-   * - Footfall: Today's total vs Yesterday's total
-   * - Dwell Time: Today's avg vs Yesterday's avg (in minutes)
-   * - Occupancy: Today's AVERAGE vs Yesterday's AVERAGE (not live value)
-   * 
-   * NOTE: Live occupancy updates via socket but trends only calculate once on load.
-   * This is intentional - comparing daily averages, not real-time values.
-   * 
-   * See TREND_CALCULATION_DOCS.md for detailed documentation and test cases.
-   */
+  // Trend indicators - compare today vs yesterday
+  // Occupancy trend uses daily average, not live value
   occupancyTrend = { percentage: 0, direction: 'up' as 'up' | 'down' };
   footfallTrend = { percentage: 0, direction: 'up' as 'up' | 'down' };
   dwellTimeTrend = { percentage: 0, direction: 'up' as 'up' | 'down' };
   
-  // Cache for yesterday's data (to prevent redundant API calls)
+  // Cache yesterday's data to avoid redundant API calls
   private yesterdayDataCache: { 
     date: string, 
     footfall: number, 
@@ -114,9 +95,7 @@ export class Dashboard implements OnInit, OnDestroy {
   malePercentage = 55;
   femalePercentage = 45;
   sidebarOpen = true;
-  currentLiveValue = 0; // Current occupancy value being updated
   isLoading = false; // Loading state for API calls
-  private currentTimeAnnotation: Date = new Date();
   
   private socketSub: Subscription | undefined;
   private siteSub: Subscription | undefined;
@@ -437,7 +416,6 @@ export class Dashboard implements OnInit, OnDestroy {
     // Get current site immediately if available
     const currentSite = this.siteService.getCurrentSite();
     if (currentSite) {
-      console.log('🏃 Pre-loading current site:', currentSite.name);
       this.currentSiteId = currentSite.siteId;
       this.siteName = currentSite.name;
     }
@@ -447,33 +425,24 @@ export class Dashboard implements OnInit, OnDestroy {
       this.cleanupOnLogout();
     });
     
-    // Start Socket first (will filter by currentSiteId)
-    // This ensures socket is always listening when component loads
+    // Start socket connection
     this.setupRealtimeUpdates();
     
-    // Timer will start after chart is initialized
+    // Timer starts after chart initialization
     
     // Subscribe to site changes
     this.siteSub = this.siteService.currentSite$.subscribe(site => {
       if (site) {
         const siteChanged = this.currentSiteId !== site.siteId;
         
-        console.log(' Site changed to:', site.name, '(changed:', siteChanged, ')');
         this.currentSiteId = site.siteId;
         this.siteName = site.name;
         
         // Only reload dashboard data if site actually changed or first load
         if (siteChanged || this.todaysFootfall === 0) {
           this.loadDashboardData(site.siteId, site.name);
-          
-          // Preload entry-exit data in background for better UX
-          console.log(' Preloading entry-exit data in background');
           this.entryCacheService.preloadData(site.siteId, this.selectedDate);
-        } else {
-          console.log('✓ Site unchanged, keeping current dashboard data');
         }
-      } else {
-        console.log('⏳ Waiting for site selection...');
       }
     });
   }
@@ -482,29 +451,21 @@ export class Dashboard implements OnInit, OnDestroy {
     // Check cache first
     const cached = this.dashboardCache.getCache(siteId, this.selectedDate);
     if (cached) {
-      console.log(' Using cached dashboard data - skipping API calls');
       this.applyCachedData(cached);
       return;
     }
     
-    console.log('/// No cache found - loading from API');
     this.isLoading = true;
     this.dashboardLoader.loadDashboard(siteId, siteName, this.selectedDate).subscribe({
       next: (data) => {
-        console.log(' Full Dashboard Data:', data);
-        
         // Store in cache
         this.dashboardCache.setCache(siteId, this.selectedDate, data);
         
         if (data.footfall) {
-          console.log(' Footfall data:', data.footfall);
           this.todaysFootfall = data.footfall.footfall || 0;
-          console.log(' Today\'s Footfall value set to:', this.todaysFootfall);
         }
         if (data.dwell) {
-          console.log(' Dwell data:', data.dwell);
           this.avgDwellTime = this.formatDwellTime(data.dwell.avgDwellMinutes);
-          console.log(' Avg Dwell Time set to:', this.avgDwellTime);
         }
 
         if (data.occupancy && data.occupancy.buckets) {
@@ -520,21 +481,15 @@ export class Dashboard implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('❌ Dashboard Load Failed:', err);
+        console.error('Dashboard Load Failed:', err);
         this.siteName = 'Error Loading Data';
         this.isLoading = false;
       }
     });
   }
 
-  // --- Helpers ---
   updateOccupancyChart(buckets: any[]) {
-    console.log(' API returned', buckets.length, 'occupancy buckets');
-    
     const hasData = buckets && buckets.length > 0;
-    if (!hasData) {
-      console.warn(' No buckets from API - initializing with live data only');
-    }
     
     const now = new Date();
     const currentHour = now.getHours();
@@ -549,21 +504,17 @@ export class Dashboard implements OnInit, OnDestroy {
       endHour = 8;
     } else {
       startHour = 8;
-      // Ensure we always include current hour + 3 hours buffer minimum
       endHour = Math.max(18, currentHour + 3);
     }
     
     // CRITICAL: If current time is past chart end, extend it
     if (currentHour >= endHour) {
       endHour = currentHour + 3;
-      console.log(' Extended chart range to accommodate current hour:', endHour);
     }
     
     // Store for marker updates
     this.chartStartHour = startHour;
     this.chartEndHour = endHour;
-    
-    console.log(' Chart time range:', startHour + ':00 to', endHour + ':00');
     
     // Create data points with Date objects for time scale
     const occupancyData: Array<{x: Date, y: number}> = [];
@@ -571,7 +522,6 @@ export class Dashboard implements OnInit, OnDestroy {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
     
-    // Helper to parse timestamps
     const parseTimestamp = (bucket: any): Date => {
       const tsString = bucket.local || bucket.ts || bucket.timestamp || bucket.time || bucket.date;
       let date = new Date(tsString);
@@ -604,7 +554,6 @@ export class Dashboard implements OnInit, OnDestroy {
         const timestamp = parseTimestamp(bucket);
         
         if (isNaN(timestamp.getTime())) {
-          console.warn(' Invalid timestamp for bucket:', bucket);
           return;
         }
         
@@ -635,7 +584,6 @@ export class Dashboard implements OnInit, OnDestroy {
     if (this.liveOccupancy > 0 && occupancyData.length > 0) {
       occupancyData[occupancyData.length - 1].y = this.liveOccupancy;
       lastKnownValue = this.liveOccupancy;
-      console.log(' Set current hour', currentHour + ':00 to live value:', this.liveOccupancy);
     }
     
     // Add intermediate point at CURRENT TIME for continuous line
@@ -646,15 +594,7 @@ export class Dashboard implements OnInit, OnDestroy {
         x: currentTimePoint,
         y: lastKnownValue
       });
-      console.log(' Added current time point:', currentHour + ':' + currentMinute, 'value:', lastKnownValue);
     }
-    
-    console.log('|| Chart initialized: data filled to', currentHour + ':' + currentMinute);
-    console.log(' Chart data points:', occupancyData.length);
-    console.log(' Sample data:', occupancyData.slice(0, 3).map(p => ({ 
-      time: p.x.toLocaleTimeString(), 
-      value: p.y 
-    })));
 
     // Set axis bounds
     const minDate = new Date(today);
@@ -680,12 +620,9 @@ export class Dashboard implements OnInit, OnDestroy {
     
     this.occupancyChartData = { ...this.occupancyChartData };
     
-    console.log('Chart X-axis range:', minDate.toLocaleTimeString(), '-', maxDate.toLocaleTimeString());
-    
-    // Mark chart as initialized and start timer
     this.chartInitialized = true;
     
-    // Initialize annotation marker position
+    // Set initial marker position
     if (occupancyData.length > 0) {
       const lastPoint = occupancyData[occupancyData.length - 1];
       const timestamp = new Date(lastPoint.x).getTime();
@@ -695,27 +632,18 @@ export class Dashboard implements OnInit, OnDestroy {
         if (annotations && annotations.liveMarker) {
           annotations.liveMarker.xMin = timestamp;
           annotations.liveMarker.xMax = timestamp;
-          console.log('Initial marker position set to:', new Date(timestamp).toLocaleTimeString());
         }
       }
     }
     
     this.startMarkerUpdateTimer();
     
-    console.log(' Chart initialization complete');
-    
-    // Ensure socket subscription is active for live updates
     if (!this.socketSub || this.socketSub.closed || !this.socketService.isConnected()) {
-      console.log(' Re-establishing socket connection for live updates');
       this.setupRealtimeUpdates();
-    } else {
-      console.log(' Socket subscription active and connected');
     }
   }
 
   updateDemographicsChart(buckets: any[]) {
-    console.log(' Raw Demographics buckets received:', JSON.stringify(buckets, null, 2));
-    
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -732,8 +660,6 @@ export class Dashboard implements OnInit, OnDestroy {
       endHour = Math.max(18, currentHour + 3);
     }
     
-    console.log('Demographics chart range:', startHour + ':00 to', endHour + ':00');
-    
     // Create data points with Date objects
     const maleData: Array<{x: Date, y: number}> = [];
     const femaleData: Array<{x: Date, y: number}> = [];
@@ -746,7 +672,6 @@ export class Dashboard implements OnInit, OnDestroy {
     let totalMale = 0;
     let totalFemale = 0;
     
-    // Parse timestamp helper (same as occupancy chart)
     const parseTimestamp = (bucket: any): Date => {
       const tsString = bucket.local || bucket.ts || bucket.timestamp || bucket.time || bucket.date;
       let date = new Date(tsString);
@@ -774,12 +699,10 @@ export class Dashboard implements OnInit, OnDestroy {
     
     // Map API buckets to hourly values
     if (buckets && buckets.length > 0) {
-      console.log(` Processing ${buckets.length} demographics buckets`);
       buckets.forEach((bucket, idx) => {
         const timestamp = parseTimestamp(bucket);
         
         if (isNaN(timestamp.getTime())) {
-          console.warn(' Invalid timestamp for demographics bucket:', bucket);
           return;
         }
         
@@ -792,15 +715,9 @@ export class Dashboard implements OnInit, OnDestroy {
           hourlyFemaleValues.set(hour, female);
           totalMale += male;
           totalFemale += female;
-          console.log(` Hour ${hour}:00 -> Male: ${male}, Female: ${female}`);
-        } else {
-          console.log(` Skipped bucket ${idx} (hour ${hour} outside range ${startHour}-${endHour})`);
         }
       });
     }
-    
-    console.log(' Historical data mapped - Male values:', Array.from(hourlyMaleValues.entries()));
-    console.log(' Historical data mapped - Female values:', Array.from(hourlyFemaleValues.entries()));
     
     // Build continuous data for ALL HOURS with historical data (not just up to current hour)
     let lastMaleValue = 0;
@@ -832,12 +749,7 @@ export class Dashboard implements OnInit, OnDestroy {
       currentTimePoint.setHours(currentHour, currentMinute, 0, 0);
       maleData.push({ x: currentTimePoint, y: lastMaleValue });
       femaleData.push({ x: currentTimePoint, y: lastFemaleValue });
-      console.log(` Added current time point at ${currentHour}:${currentMinute} - Male: ${lastMaleValue}, Female: ${lastFemaleValue}`);
     }
-    
-    console.log(' Demographics data points built:', maleData.length);
-    console.log(' Sample male data:', maleData.slice(0, 5).map(p => ({ time: p.x.toLocaleTimeString(), value: p.y })));
-    console.log(' Sample female data:', femaleData.slice(0, 5).map(p => ({ time: p.x.toLocaleTimeString(), value: p.y })));
     
     // Update chart data
     this.demographicsLineChartData.datasets[0].data = maleData;
@@ -867,8 +779,6 @@ export class Dashboard implements OnInit, OnDestroy {
     this.donutChartData.datasets[0].data = [totalMale, totalFemale];
     this.updateDemographicsPercentages(totalMale, totalFemale);
     this.donutChartData = { ...this.donutChartData };
-    
-    console.log(' Demographics line chart updated with real-time data');
   }
 
   formatDwellTime(minutes: number): string {
@@ -885,7 +795,6 @@ export class Dashboard implements OnInit, OnDestroy {
   loadYesterdayDataForTrends(siteId: string, siteName: string) {
     // Prevent duplicate API calls if already in progress
     if (this.trendCalculationInProgress) {
-      console.log(' Trend calculation already in progress, skipping...');
       return;
     }
     
@@ -895,7 +804,7 @@ export class Dashboard implements OnInit, OnDestroy {
     
     // Check cache first
     if (this.yesterdayDataCache && this.yesterdayDataCache.date === yesterdayDateKey) {
-      console.log(' Using cached yesterday\'s data for trends');
+      console.log('� Using cached yesterday\'s data for trends');
       this.calculateAllTrends(
         this.yesterdayDataCache.footfall,
         this.yesterdayDataCache.dwellMinutes,
@@ -904,14 +813,12 @@ export class Dashboard implements OnInit, OnDestroy {
       return;
     }
     
-    console.log(' Loading yesterday\'s data for trend comparison:', yesterdayDateKey);
+    console.log('Loading yesterday\'s data for trend comparison:', yesterdayDateKey);
     this.trendCalculationInProgress = true;
     
     // Load yesterday's data
     this.dashboardLoader.loadDashboard(siteId, siteName, yesterday).subscribe({
       next: (yesterdayData) => {
-        console.log(' Yesterday\'s data loaded:', yesterdayData);
-        
         // Extract and validate yesterday's metrics
         const yesterdayFootfall = this.extractValidNumber(yesterdayData.footfall?.footfall);
         const yesterdayDwell = this.extractValidNumber(yesterdayData.dwell?.avgDwellMinutes);
@@ -932,7 +839,7 @@ export class Dashboard implements OnInit, OnDestroy {
         this.trendCalculationInProgress = false;
       },
       error: (err) => {
-        console.warn(' Could not load yesterday\'s data for trends:', err);
+        console.warn('Could not load yesterday\'s data for trends:', err);
         this.trendCalculationInProgress = false;
         // Keep default trend values (0, 'up') - indicates no data available
       }
@@ -943,17 +850,14 @@ export class Dashboard implements OnInit, OnDestroy {
     // Footfall trend
     const todayFootfall = this.extractValidNumber(this.todaysFootfall);
     this.footfallTrend = this.calculateTrend(todayFootfall, yesterdayFootfall);
-    console.log(' Footfall trend:', `${todayFootfall} vs ${yesterdayFootfall} =`, this.footfallTrend);
     
     // Dwell time trend
     const todayDwell = this.parseDwellTimeToMinutes(this.avgDwellTime);
     this.dwellTimeTrend = this.calculateTrend(todayDwell, yesterdayDwell);
-    console.log(' Dwell time trend:', `${todayDwell.toFixed(2)}min vs ${yesterdayDwell.toFixed(2)}min =`, this.dwellTimeTrend);
     
     // Occupancy trend - compare today's average (not just live) with yesterday's average
     const todayAvgOccupancy = this.calculateTodayAverageOccupancy();
     this.occupancyTrend = this.calculateTrend(todayAvgOccupancy, yesterdayAvg);
-    console.log(' Occupancy trend:', `${todayAvgOccupancy} vs ${yesterdayAvg} =`, this.occupancyTrend);
   }
 
   calculateTrend(today: number, yesterday: number): { percentage: number, direction: 'up' | 'down' } {
@@ -1022,7 +926,7 @@ export class Dashboard implements OnInit, OnDestroy {
       
       return validMins + (validSecs / 60);
     } catch (error) {
-      console.warn(' Failed to parse dwell time:', dwellTime, error);
+      console.warn('Failed to parse dwell time:', dwellTime, error);
       return 0;
     }
   }
@@ -1082,7 +986,6 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    console.log('👋 User logging out');
     // Clear all caches
     this.dashboardCache.clearCache();
     this.entryCacheService.clearCache();
@@ -1095,18 +998,14 @@ export class Dashboard implements OnInit, OnDestroy {
   }
   
   private applyCachedData(cached: any): void {
-    console.log(' Applying cached dashboard data');
-    
     // Apply footfall
     if (cached.footfall) {
       this.todaysFootfall = cached.footfall.footfall || 0;
-      console.log(' Cached Footfall:', this.todaysFootfall);
     }
     
     // Apply dwell time
     if (cached.dwell) {
       this.avgDwellTime = this.formatDwellTime(cached.dwell.avgDwellMinutes);
-      console.log(' Cached Dwell Time:', this.avgDwellTime);
     }
     
     // Apply occupancy chart
@@ -1118,6 +1017,11 @@ export class Dashboard implements OnInit, OnDestroy {
     if (cached.demographics && cached.demographics.buckets) {
       this.updateDemographicsChart(cached.demographics.buckets);
     }
+    
+    // Load trends for cached data (if not already loaded)
+    if (this.currentSiteId && this.occupancyTrend.percentage === 0 && this.footfallTrend.percentage === 0) {
+      this.loadYesterdayDataForTrends(this.currentSiteId, this.siteName);
+    }
   }
 
   onDateChange(date: Date | null): void {
@@ -1126,26 +1030,23 @@ export class Dashboard implements OnInit, OnDestroy {
     this.selectedDate = date;
     this.updateDateDisplayText();
     
-    console.log(' User selected date:', date.toLocaleDateString());
-    console.log(' Display text:', this.dateDisplayText);
-    
     // Clear yesterday's data cache since we're changing dates
     this.clearTrendCache();
     
     // Reload dashboard data for selected date
     if (this.currentSiteId) {
-      console.log(' Reloading dashboard for site:', this.currentSiteId);
+      console.log('Reloading dashboard for site:', this.currentSiteId);
       this.loadDashboardData(this.currentSiteId, this.siteName);
       
       // Also preload entry-exit data for new date
-      console.log(' Preloading entry-exit data for new date');
+      console.log('Preloading entry-exit data for new date');
       this.entryCacheService.clearCache();
       this.entryCacheService.preloadData(this.currentSiteId, this.selectedDate);
       
       // Clear dashboard cache too
       this.dashboardCache.clearCache();
     } else {
-      console.warn(' No site selected, cannot reload dashboard');
+      console.warn('No site selected, cannot reload dashboard');
     }
   }
 
@@ -1176,32 +1077,25 @@ export class Dashboard implements OnInit, OnDestroy {
   setupRealtimeUpdates() {
     // Check if socket is connected, if not reconnect
     if (!this.socketService.isConnected()) {
-      console.log(' Socket not connected, reconnecting...');
       this.socketService.connect();
     }
     
     // If subscription already exists and is active, don't create a new one
     if (this.socketSub && !this.socketSub.closed) {
-      console.log(' Socket subscription already active, reusing it');
       return;
     }
     
-    console.log(' Setting up real-time socket updates');
     this.socketSub = this.socketService.getLiveOccupancyUpdates().subscribe((data: any) => {
       if (!data) return;
       
       // Filter: Only show data for the current site
       if (data.siteId !== this.currentSiteId) {
-        console.log(' Ignoring socket data for different site:', data.siteId);
         return;
       }
-      
-      console.log('/// Live socket data received for current site:', data);
       
       // Update live occupancy (use siteOccupancy from socket data)
       if (data.siteOccupancy !== undefined) {
         this.liveOccupancy = data.siteOccupancy;
-        console.log(' Live occupancy updated:', this.liveOccupancy);
       }
       
       // Note: footfall and dwellTime are NOT sent via socket - they only come from API
@@ -1239,8 +1133,6 @@ export class Dashboard implements OnInit, OnDestroy {
           
           // Trigger line extension which will use these new values
           this.extendDemographicsLineToCurrentTime();
-          
-          console.log(' Live demographics updated - Male:', male, 'Female:', female);
         }
       }
       
@@ -1249,9 +1141,7 @@ export class Dashboard implements OnInit, OnDestroy {
          const currentData = this.occupancyChartData.datasets[0].data as number[];
          const currentLabels = this.occupancyChartData.labels as string[];
          
-         // Safety check: Ensure arrays exist and are valid
          if (!Array.isArray(currentData) || !Array.isArray(currentLabels)) {
-           console.warn(' Chart data structure invalid, skipping socket update');
            return;
          }
          
@@ -1278,7 +1168,7 @@ export class Dashboard implements OnInit, OnDestroy {
          }
          
          if (isNaN(socketTime.getTime())) {
-           console.error('❌ Invalid socket timestamp:', data.ts);
+           console.error('Invalid socket timestamp:', data.ts);
            return;
          }
          
@@ -1289,29 +1179,21 @@ export class Dashboard implements OnInit, OnDestroy {
          if (liveHour >= this.chartStartHour && liveHour <= this.chartEndHour) {
            // Update live occupancy
            this.liveOccupancy = data.siteOccupancy;
-           this.currentLiveValue = data.siteOccupancy;
            
            // The extendLineToCurrentTime() method running every 5 seconds will pick this up
-           console.log(' Socket update: live occupancy =', data.siteOccupancy, 'at', liveHour + ':' + liveMinute);
          } else {
            // Socket time is outside range - extend chart range dynamically
-           console.warn(' Socket time', liveHour + ':' + liveMinute, 'outside chart range', this.chartStartHour + '-' + this.chartEndHour);
-           
            // Extend chart end hour to accommodate new data
            if (liveHour > this.chartEndHour) {
              this.chartEndHour = liveHour + 3;
-             console.log('🔧 Extended chart range to:', this.chartStartHour + '-' + this.chartEndHour);
              
              // Update live occupancy
              this.liveOccupancy = data.siteOccupancy;
-             this.currentLiveValue = data.siteOccupancy;
              
              // Trigger line extension which will update the chart
              this.extendLineToCurrentTime();
            }
          }
-      } else {
-        console.warn(' Cannot update chart - chart data not initialized');
       }
     });
   }
@@ -1321,12 +1203,10 @@ export class Dashboard implements OnInit, OnDestroy {
       this.markerTimerSub.unsubscribe();
     }
     
-    // Update marker and line every 5 seconds using RxJS
+    // Update marker and line every 5 seconds
     this.markerTimerSub = interval(5000).subscribe(() => {
-      // IMPORTANT: Extend line FIRST, then update marker position
       this.extendLineToCurrentTime();
       this.extendDemographicsLineToCurrentTime();
-      // Use setTimeout to ensure marker updates after chart has re-rendered
       setTimeout(() => {
         this.updateMarkerPosition();
       }, 100);
@@ -1338,12 +1218,11 @@ export class Dashboard implements OnInit, OnDestroy {
     setTimeout(() => {
       this.updateMarkerPosition();
     }, 100);
-    console.log(' Marker and line update timer started for both charts');
   }
   
   updateMarkerPosition() {
     if (this.chartStartHour === 0 && this.chartEndHour === 0) {
-      return; // Chart not initialized yet
+      return;
     }
     
     // Update annotation to current time - Chart.js handles positioning natively
@@ -1356,8 +1235,7 @@ export class Dashboard implements OnInit, OnDestroy {
     const lastPoint = sortedData[sortedData.length - 1];
     
     if (lastPoint) {
-      this.currentTimeAnnotation = new Date(lastPoint.x);
-      const timestamp = this.currentTimeAnnotation.getTime();
+      const timestamp = new Date(lastPoint.x).getTime();
       
       // Update chart options with new marker position
       if (this.occupancyChartOptions.plugins?.annotation) {
@@ -1368,9 +1246,6 @@ export class Dashboard implements OnInit, OnDestroy {
           
           // Force chart update
           this.occupancyChartData = { ...this.occupancyChartData };
-          
-          const timeStr = this.currentTimeAnnotation.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-          console.log(` Native marker at: ${timeStr}`);
         }
       }
     }
@@ -1384,8 +1259,6 @@ export class Dashboard implements OnInit, OnDestroy {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
-    
-    console.log(` Extending line - Current: ${currentHour}:${currentMinute.toString().padStart(2, '0')}, Range: ${this.chartStartHour}-${this.chartEndHour}`);
     
     if (currentHour >= this.chartStartHour && currentHour <= this.chartEndHour) {
       const currentData = [...this.occupancyChartData.datasets[0].data] as Array<{x: Date, y: number}>;
@@ -1419,7 +1292,6 @@ export class Dashboard implements OnInit, OnDestroy {
       if (currentHourPoint && this.liveOccupancy > 0) {
         currentHourPoint.y = this.liveOccupancy;
         lastKnownValue = this.liveOccupancy;
-        console.log(` Updated hour ${currentHour}:00 to live value: ${this.liveOccupancy}`);
       }
       
       // Check if we already have current time point
@@ -1437,7 +1309,6 @@ export class Dashboard implements OnInit, OnDestroy {
           x: currentTimePoint,
           y: lastKnownValue
         });
-        console.log(` Added current time point at ${currentHour}:${currentMinute} with value: ${lastKnownValue}`);
       }
       
       // Sort by time
@@ -1451,9 +1322,6 @@ export class Dashboard implements OnInit, OnDestroy {
           data: filteredData
         }]
       };
-      console.log(` Line extended with ${filteredData.length} points (from ${this.chartStartHour}:00 to ${currentHour}:${currentMinute})`);
-    } else {
-      console.warn(` Current hour ${currentHour} outside chart range ${this.chartStartHour}-${this.chartEndHour}`);
     }
   }
 
@@ -1465,8 +1333,6 @@ export class Dashboard implements OnInit, OnDestroy {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
-    
-    console.log(` Extending demographics - Current: ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
     
     if (currentHour >= this.chartStartHour && currentHour <= this.chartEndHour) {
       const maleData = [...this.demographicsLineChartData.datasets[0].data] as Array<{x: Date, y: number}>;
@@ -1519,7 +1385,6 @@ export class Dashboard implements OnInit, OnDestroy {
         
         filteredMaleData.push({ x: currentTimePoint, y: lastMaleValue });
         filteredFemaleData.push({ x: currentTimePoint, y: lastFemaleValue });
-        console.log(` Added demographics point at ${currentHour}:${currentMinute} M:${lastMaleValue} F:${lastFemaleValue}`);
       }
       
       // Sort by time
@@ -1534,14 +1399,12 @@ export class Dashboard implements OnInit, OnDestroy {
           { ...this.demographicsLineChartData.datasets[1], data: filteredFemaleData }
         ]
       };
-      console.log(` Demographics lines extended with ${filteredMaleData.length} points`);
     }
   }
 
   ngOnDestroy() {
     // Keep socket subscription alive when navigating to other pages
     // Socket will only be cleaned up on logout
-    console.log(' Dashboard component destroyed but keeping socket alive');
     
     // Clear marker timer
     if (this.markerTimerSub) {
@@ -1565,14 +1428,12 @@ export class Dashboard implements OnInit, OnDestroy {
   private clearTrendCache(): void {
     this.yesterdayDataCache = null;
     this.trendCalculationInProgress = false;
-    console.log(' Trend cache cleared');
   }
   
   /**
    * Called only when user logs out - cleans up socket subscription
    */
   cleanupOnLogout() {
-    console.log('Cleaning up socket subscription on logout');
     if (this.socketSub) {
       this.socketSub.unsubscribe();
       this.socketSub = undefined;

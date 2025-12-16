@@ -16,34 +16,34 @@ export class DashboardLoaderService {
     // Create the payload (timestamps in MILLISECONDS)
     const payload = this.createPayload(siteId, selectedDate);
 
-    console.log("--- Loading Dashboard for:", siteName, "Date:", selectedDate.toLocaleDateString(), payload);
+    console.log("Loading Dashboard for:", siteName, "Date:", selectedDate.toLocaleDateString(), payload);
 
     // Fire all API calls in parallel with the correct payload
     return forkJoin({
       siteInfo: of({ siteId, name: siteName }),
           // Use catchError so one failure doesn't break the whole dashboard
           footfall: this.analytics.getFootfall(payload).pipe(
-            tap(data => console.log('✅ Footfall API response:', data)),
+            tap(data => console.log('Footfall API response:', data)),
             catchError(e => {
-             console.error('❌ Footfall API failed:', e);
+             console.error('Footfall API failed:', e);
              return of({ footfall: 0 });
           })),
           dwell: this.analytics.getDwellTime(payload).pipe(
-            tap(data => console.log('✅ Dwell API response:', data)),
+            tap(data => console.log('Dwell API response:', data)),
             catchError(e => {
-             console.error('❌ Dwell API failed:', e);
+             console.error('Dwell API failed:', e);
              return of({ avgDwellMinutes: 0, dwellRecords: 0 });
           })),
           occupancy: this.analytics.getOccupancyHistory(payload).pipe(
-            tap(data => console.log('✅ Occupancy API response:', data)),
+            tap(data => console.log('Occupancy API response:', data)),
             catchError(e => {
-             console.error('❌ Occupancy API failed:', e);
+             console.error('Occupancy API failed:', e);
              return of({ buckets: [] });
           })),
           demographics: this.analytics.getDemographics(payload).pipe(
-            tap(data => console.log('✅ Demographics API response:', data)),
+            tap(data => console.log('Demographics API response:', data)),
             catchError(e => {
-             console.error('❌ Demographics API failed:', e);
+             console.error('Demographics API failed:', e);
              return of({ buckets: [] });
           }))
         });
@@ -65,16 +65,16 @@ export class DashboardLoaderService {
     let toUtc: number;
     if (isToday) {
       toUtc = today.getTime(); // Current time
-      console.log(' TODAY: Fetching from 00:00 to NOW');
+      console.log('📅 TODAY: Fetching from 00:00 to NOW');
     } else {
       toUtc = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999).getTime();
-      console.log(' PAST DATE: Fetching full day 00:00 to 23:59');
+      console.log('📅 PAST DATE: Fetching full day 00:00 to 23:59');
     }
 
-    console.log(' Date:', selectedDate.toLocaleDateString());
-    console.log(' From:', new Date(fromUtc).toLocaleString());
-    console.log(' To:', new Date(toUtc).toLocaleString());
-    console.log(' Payload:', { siteId, fromUtc, toUtc });
+    console.log('📅 Date:', selectedDate.toLocaleDateString());
+    console.log('📅 From:', new Date(fromUtc).toLocaleString());
+    console.log('📅 To:', new Date(toUtc).toLocaleString());
+    console.log('📅 Payload:', { siteId, fromUtc, toUtc });
 
     return {
       siteId: siteId,

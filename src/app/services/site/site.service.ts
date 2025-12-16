@@ -21,27 +21,23 @@ export class SiteService {
 
   // Load all sites from API and set Dubai Mall as default
   loadSites(): Observable<Site[]> {
-    console.log(' Loading sites from API...');
     return this.http.get<Site[]>(this.apiUrl).pipe(
       timeout(10000),
       retry({
         count: 3,
         delay: (error, retryCount) => {
-          console.log(`--- Sites API retry ${retryCount}/3 - waiting ${Math.pow(2, retryCount - 1)}s`);
           return of(error).pipe(delay(1000 * Math.pow(2, retryCount - 1)));
         }
       }),
       tap((sites: Site[]) => {
         this.sites = sites;
-        console.log('✅ Sites received:', sites.length, 'sites');
         // Set first site (Dubai Mall) as default if no site is selected
         if (sites.length > 0 && !this.currentSiteSubject.value) {
-          console.log('/// Setting default site:', sites[0].name);
           this.selectSite(sites[0].siteId);
         }
       }),
       catchError((error) => {
-        console.error('❌ Failed to load sites after retries:', error);
+        console.error('Failed to load sites after retries:', error);
         return of([]);
       })
     );
@@ -52,7 +48,6 @@ export class SiteService {
     const site = this.sites.find(s => s.siteId === siteId);
     if (site) {
       this.currentSiteSubject.next(site);
-      console.log('✅ Site selected:', site.name);
     }
   }
 

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth/auth.service';
 import { EntryExitCacheService } from '../../services/entry-exit-cache/entry-exit-cache.service';
 import { SiteService } from '../../services/site/site.service';
-import { Form, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 
@@ -74,13 +74,12 @@ export class Login {
       })
     )
     .subscribe({
-      next: (res) => {
-        console.log("Login Successful:", res);
+      next: () => {
+        console.log("Login Successful with token!");
         
         // Preload entry-exit data in background after successful login
         const currentSite = this.siteService.getCurrentSite();
         if (currentSite) {
-          console.log(' Preloading entry-exit data for site:', currentSite.name);
           this.cacheService.preloadData(currentSite.siteId, new Date());
         }
         

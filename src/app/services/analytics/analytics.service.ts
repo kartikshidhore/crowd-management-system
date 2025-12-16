@@ -19,18 +19,16 @@ export class AnalyticsService {
 
   // 2. POST Requests (Pass payload to body)
   getFootfall(payload: any): Observable<any> {
-    console.log('📡 Calling Footfall API with payload:', payload);
     return this.http.post<any>(`${this.baseUrl}/analytics/footfall`, payload).pipe(
       timeout(10000),
       retryWhen(errors => errors.pipe(
         mergeMap((error, index) => {
           const retryCount = index + 1;
           if (retryCount > 3) {
-            console.error('XXX Footfall API failed after 3 retries XXX');
+            console.error('Footfall API failed after 3 retries');
             return throwError(() => error);
           }
           const delayMs = 1000 * Math.pow(2, index);
-          console.log(`--- Footfall API retry ${retryCount}/3 - waiting ${delayMs / 1000}s`);
           return timer(delayMs);
         })
       ))
@@ -38,18 +36,16 @@ export class AnalyticsService {
   }
 
   getDwellTime(payload: any): Observable<any> {
-    console.log('📡 Calling Dwell API with payload:', payload);
     return this.http.post<any>(`${this.baseUrl}/analytics/dwell`, payload).pipe(
       timeout(10000),
       retryWhen(errors => errors.pipe(
         mergeMap((error, index) => {
           const retryCount = index + 1;
           if (retryCount > 3) {
-            console.error('XXX Dwell API failed after 3 retries XXX');
+            console.error('Dwell API failed after 3 retries');
             return throwError(() => error);
           }
           const delayMs = 1000 * Math.pow(2, index);
-          console.log(`--- Dwell API retry ${retryCount}/3 - waiting ${delayMs / 1000}s`);
           return timer(delayMs);
         })
       ))
@@ -57,18 +53,16 @@ export class AnalyticsService {
   }
 
   getOccupancyHistory(payload: any): Observable<any> {
-    console.log('📡 Calling Occupancy API with payload:', payload);
     return this.http.post<any>(`${this.baseUrl}/analytics/occupancy`, payload).pipe(
       timeout(10000),
       retryWhen(errors => errors.pipe(
         mergeMap((error, index) => {
           const retryCount = index + 1;
           if (retryCount > 3) {
-            console.error('XXX Occupancy API failed after 3 retries XXX');
+            console.error('Occupancy API failed after 3 retries');
             return throwError(() => error);
           }
           const delayMs = 1000 * Math.pow(2, index);
-          console.log(`--- Occupancy API retry ${retryCount}/3 - waiting ${delayMs / 1000}s`);
           return timer(delayMs);
         })
       ))
@@ -76,18 +70,16 @@ export class AnalyticsService {
   }
 
   getDemographics(payload: any): Observable<any> {
-    console.log('📡 Calling Demographics API with payload:', payload);
     return this.http.post<any>(`${this.baseUrl}/analytics/demographics`, payload).pipe(
       timeout(10000),
       retryWhen(errors => errors.pipe(
         mergeMap((error, index) => {
           const retryCount = index + 1;
           if (retryCount > 3) {
-            console.error('XXX Demographics API failed after 3 retries XXX');
+            console.error('Demographics API failed after 3 retries');
             return throwError(() => error);
           }
           const delayMs = 1000 * Math.pow(2, index);
-          console.log(`--- Demographics API retry ${retryCount}/3 - waiting ${delayMs / 1000}s`);
           return timer(delayMs);
         })
       ))
@@ -95,7 +87,6 @@ export class AnalyticsService {
   }
 
   getEntryExit(payload: any): Observable<any> {
-    console.log('📡 Calling Entry-Exit API with payload:', payload);
     return this.http.post<any>(`${this.baseUrl}/analytics/entry-exit`, payload);
   }
 
@@ -105,18 +96,16 @@ export class AnalyticsService {
       pageNumber,
       pageSize
     };
-    console.log('📡 Calling Paginated Entry-Exit API:', paginatedPayload);
     return this.http.post<any>(`${this.baseUrl}/analytics/entry-exit`, paginatedPayload).pipe(
       timeout(10000),
       retryWhen(errors => errors.pipe(
         mergeMap((error, index) => {
           const retryCount = index + 1;
           if (retryCount > 3) {
-            console.error('XXX Entry-Exit API failed after 3 retries XXX');
+            console.error('Entry-Exit API failed after 3 retries');
             return throwError(() => error);
           }
           const delayMs = 1000 * Math.pow(2, index);
-          console.log(`--- Entry-Exit API retry ${retryCount}/3 - waiting ${delayMs / 1000}s`);
           return timer(delayMs);
         })
       ))

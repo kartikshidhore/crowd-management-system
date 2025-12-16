@@ -40,7 +40,6 @@ export class AlertsService {
     this.alerts.unshift(alert); // Add to beginning
     this.alertsSubject.next([...this.alerts]);
     this.updateUnseenCount();
-    console.log('🔔 New alert added:', alert.personName, alert.action);
   }
 
   /**
@@ -57,7 +56,6 @@ export class AlertsService {
     this.alerts.forEach(alert => alert.seen = true);
     this.alertsSubject.next([...this.alerts]);
     this.updateUnseenCount();
-    console.log(' All alerts marked as seen');
   }
 
   /**

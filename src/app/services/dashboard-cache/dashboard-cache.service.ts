@@ -35,7 +35,6 @@ export class DashboardCacheService {
       timestamp: Date.now()
     };
     
-    console.log('💾 Caching dashboard data for', siteId, dateKey);
     this.cacheSubject.next(cacheData);
   }
 
@@ -45,7 +44,6 @@ export class DashboardCacheService {
   getCache(siteId: string, selectedDate: Date): DashboardCache | null {
     const cached = this.cacheSubject.value;
     if (!cached) {
-      console.log('📭 No cached dashboard data');
       return null;
     }
 
@@ -53,13 +51,9 @@ export class DashboardCacheService {
     
     // Check if cache matches current site and date
     if (cached.siteId === siteId && cached.selectedDate === dateKey) {
-      const age = Date.now() - cached.timestamp;
-      const ageMinutes = Math.floor(age / 60000);
-      console.log('💾 Found cached dashboard data (age:', ageMinutes, 'min)');
       return cached;
     }
 
-    console.log('❌ Cache mismatch - Site or date changed');
     return null;
   }
 
@@ -67,7 +61,6 @@ export class DashboardCacheService {
    * Clear all cached data
    */
   clearCache(): void {
-    console.log('🗑️ Clearing dashboard cache');
     this.cacheSubject.next(null);
   }
 

@@ -7,7 +7,7 @@ import { Login } from './pages/login/login.component';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { provideAnimations } from '@angular/platform-browser/animations';
 
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './services/interceptor/auth.interceptor';
 
 

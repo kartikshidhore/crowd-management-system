@@ -61,14 +61,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // Load sites
     this.siteService.loadSites().subscribe((sites) => {
       this.sites = sites;
-      console.log(' Sites loaded in navbar:', sites.length);
     });
     
     // Subscribe to current site changes
     this.siteSub = this.siteService.currentSite$.subscribe(site => {
       if (site) {
         this.selectedSiteId = site.siteId;
-        console.log(' Navbar updated to:', site.name);
       }
     });
 
@@ -80,7 +78,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // Listen to socket alerts
     this.socketSub = this.socketService.getAlerts().subscribe((data: any) => {
       if (data) {
-        console.log(' Alert received from socket:', data);
         this.alertsService.addAlert({
           id: data.id || Date.now().toString(),
           personName: data.personName || data.name || 'Unknown',
@@ -95,7 +92,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   onSiteChange(siteId: string) {
-    console.log(' User selected site:', siteId);
     this.siteService.selectSite(siteId);
   }
 
