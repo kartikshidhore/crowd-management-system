@@ -76,13 +76,6 @@ export class Login {
     .subscribe({
       next: () => {
         console.log("Login Successful with token!");
-        
-        // Preload entry-exit data in background after successful login
-        const currentSite = this.siteService.getCurrentSite();
-        if (currentSite) {
-          this.cacheService.preloadData(currentSite.siteId, new Date());
-        }
-        
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {

@@ -20,11 +20,9 @@ export class EntryExitCacheService {
    */
   preloadData(siteId: string, selectedDate: Date = new Date()): void {
     if (this.isLoadingSubject.value) {
-      console.log('⏳ Already loading entry-exit data, skipping preload');
       return;
     }
 
-    console.log('Preloading entry-exit data for siteId:', siteId);
     this.isLoadingSubject.next(true);
 
     const payload = this.createPayload(siteId, selectedDate);
@@ -33,7 +31,6 @@ export class EntryExitCacheService {
       .pipe(
         tap({
           next: (data) => {
-            console.log('Entry-exit data preloaded successfully:', data.totalRecords, 'total records');
             this.cacheSubject.next(data);
             this.isLoadingSubject.next(false);
           },
@@ -50,7 +47,6 @@ export class EntryExitCacheService {
    * Load fresh data with pagination (clears cache and reloads)
    */
   loadData(siteId: string, selectedDate: Date = new Date(), pageNumber: number = 1, pageSize: number = 50): Observable<any> {
-    console.log('Loading fresh entry-exit data - Page:', pageNumber);
     this.isLoadingSubject.next(true);
 
     const payload = this.createPayload(siteId, selectedDate);
@@ -58,7 +54,6 @@ export class EntryExitCacheService {
     return this.analyticsService.getEntryExitPaginated(payload, pageNumber, pageSize).pipe(
       tap({
         next: (data) => {
-          console.log('Entry-exit data loaded successfully - Page', pageNumber, 'of', data.totalPages);
           // Only cache first page for instant display
           if (pageNumber === 1) {
             this.cacheSubject.next(data);
@@ -87,7 +82,6 @@ export class EntryExitCacheService {
     console.log('Clearing entry-exit cache');
     this.cacheSubject.next(null);
   }
-
   /**
    * Create API payload with proper timestamp logic
    */
@@ -108,13 +102,6 @@ export class EntryExitCacheService {
     
     const fromUtc = midnight.getTime(); // milliseconds
     const toUtc = isToday ? now.getTime() : endOfDay.getTime(); // milliseconds
-    
-    console.log('📅 Payload:', {
-      siteId,
-      fromUtc: new Date(fromUtc).toISOString(),
-      toUtc: new Date(toUtc).toISOString(),
-      isToday
-    });
     
     return { siteId, fromUtc, toUtc };
   }

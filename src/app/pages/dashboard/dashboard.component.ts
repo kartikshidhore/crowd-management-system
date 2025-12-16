@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, forkJoin } from 'rxjs';
 
 // Services
 import { DashboardLoaderService } from '../../services/dashboard-loader/dashboard-loader.service';
@@ -86,12 +86,16 @@ export class Dashboard implements OnInit, OnDestroy {
     avgOccupancy: number 
   } | null = null;
   private trendCalculationInProgress = false;
+  private dashboardLoadInProgress = false;
+  private lastLoadedSiteId = '';
+  private lastLoadedDate = '';
   
   // Date Selection
   selectedDate: Date = new Date();
   maxDate: Date = new Date();
   dateDisplayText: string = 'Today'; 
   currentSiteId = '';
+  isViewingToday = true;
   malePercentage = 55;
   femalePercentage = 45;
   sidebarOpen = true;
@@ -413,103 +417,187 @@ export class Dashboard implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Get current site immediately if available
-    const currentSite = this.siteService.getCurrentSite();
-    if (currentSite) {
-      this.currentSiteId = currentSite.siteId;
-      this.siteName = currentSite.name;
-    }
-    
     // Subscribe to logout events for cleanup
     this.logoutSub = this.cleanupService.onLogout$.subscribe(() => {
       this.cleanupOnLogout();
     });
     
-    // Start socket connection
-    this.setupRealtimeUpdates();
+    // Only start socket connection if viewing today
+    this.isViewingToday = this.checkIsToday(this.selectedDate);
+    if (this.isViewingToday) {
+      this.setupRealtimeUpdates();
+    }
     
-    // Timer starts after chart initialization
-    
-    // Subscribe to site changes
+    // Subscribe to site changes - this handles BOTH initial load and site changes
     this.siteSub = this.siteService.currentSite$.subscribe(site => {
+      console.log('[Dashboard] Site subscription fired:', site?.siteId);
       if (site) {
-        const siteChanged = this.currentSiteId !== site.siteId;
+        // Check if this is a different site BEFORE updating currentSiteId
+        const isDifferentSite = this.currentSiteId !== site.siteId;
+        console.log('  Current:', this.currentSiteId, '| New:', site.siteId, '| Different?', isDifferentSite);
         
-        this.currentSiteId = site.siteId;
-        this.siteName = site.name;
-        
-        // Only reload dashboard data if site actually changed or first load
-        if (siteChanged || this.todaysFootfall === 0) {
+        if (isDifferentSite) {
+          console.log('[Dashboard] ✅ Loading new site:', site.siteId);
+          // Update site info
+          this.currentSiteId = site.siteId;
+          this.siteName = site.name;
+          
+          // Reset trends to prevent showing stale data from previous site
+          this.footfallTrend = { percentage: 0, direction: 'up' };
+          this.dwellTimeTrend = { percentage: 0, direction: 'up' };
+          this.occupancyTrend = { percentage: 0, direction: 'up' };
+          this.trendCalculationInProgress = false;
+          this.dashboardLoadInProgress = false;
+          
+          // Clear memory cache to free up memory (localStorage remains intact)
+          this.dashboardCache.clearMemoryCache();
+          this.clearTrendCache();
+          
+          // Load data for new site (will check localStorage cache first)
           this.loadDashboardData(site.siteId, site.name);
-          this.entryCacheService.preloadData(site.siteId, this.selectedDate);
         }
       }
     });
   }
 
   private loadDashboardData(siteId: string, siteName: string) {
-    // Check cache first
-    const cached = this.dashboardCache.getCache(siteId, this.selectedDate);
-    if (cached) {
-      this.applyCachedData(cached);
+    const dateKey = this.selectedDate.toISOString().split('T')[0];
+    const loadKey = `${siteId}_${dateKey}`;
+    const lastLoadKey = `${this.lastLoadedSiteId}_${this.lastLoadedDate}`;
+    
+    console.log('[Dashboard] loadDashboardData called');
+    console.log('  Site:', siteId, '| Date:', dateKey);
+    console.log('  Last Load:', this.lastLoadedSiteId, '| Last Date:', this.lastLoadedDate);
+    console.log('  InProgress:', this.dashboardLoadInProgress);
+    
+    // Prevent concurrent loads
+    if (this.dashboardLoadInProgress) {
+      console.warn('[Dashboard] ❌ Load already in progress, skipping duplicate call');
       return;
     }
     
+    // Prevent duplicate loads of same site/date
+    if (loadKey === lastLoadKey && this.lastLoadedSiteId !== '') {
+      console.warn('[Dashboard] ❌ Already loaded this site/date, skipping duplicate');
+      return;
+    }
+    
+    // Check cache first
+    const cached = this.dashboardCache.getCache(siteId, this.selectedDate);
+    if (cached) {
+      console.log('[Dashboard] ✅ Using cached data');
+      this.lastLoadedSiteId = siteId;
+      this.lastLoadedDate = dateKey;
+      this.applyCachedData(cached);
+      // Load trends lazily (only if viewing today and trends not yet calculated)
+      if (this.isViewingToday) {
+        this.loadTrendsWithCache(siteId, siteName);
+      }
+      return;
+    }
+    
+    console.log('[Dashboard] ✅ No cache, fetching from API');
+    this.dashboardLoadInProgress = true;
     this.isLoading = true;
+    this.lastLoadedSiteId = siteId;
+    this.lastLoadedDate = dateKey;
+    
+    // Load only the selected date's data (don't preload yesterday)
     this.dashboardLoader.loadDashboard(siteId, siteName, this.selectedDate).subscribe({
       next: (data) => {
-        // Store in cache
+        // Cache the data
         this.dashboardCache.setCache(siteId, this.selectedDate, data);
         
-        if (data.footfall) {
-          this.todaysFootfall = data.footfall.footfall || 0;
-        }
-        if (data.dwell) {
-          this.avgDwellTime = this.formatDwellTime(data.dwell.avgDwellMinutes);
-        }
-
-        if (data.occupancy && data.occupancy.buckets) {
-           this.updateOccupancyChart(data.occupancy.buckets);
-        }
-        if (data.demographics && data.demographics.buckets) {
-           this.updateDemographicsChart(data.demographics.buckets);
-        }
+        // Apply the data to UI
+        this.applyDashboardData(data);
         
-        // Load yesterday's data for trend comparison
-        this.loadYesterdayDataForTrends(siteId, siteName);
+        // Only load trends if viewing today (lazy load yesterday's data when needed)
+        if (this.isViewingToday) {
+          this.loadTrendsWithCache(siteId, siteName);
+        }
         
         this.isLoading = false;
+        this.dashboardLoadInProgress = false;
       },
       error: (err) => {
         console.error('Dashboard Load Failed:', err);
         this.siteName = 'Error Loading Data';
         this.isLoading = false;
+        this.dashboardLoadInProgress = false;
       }
     });
   }
+  
+  private applyDashboardData(data: any): void {
+    if (data.footfall) {
+      this.todaysFootfall = data.footfall.footfall || 0;
+    }
+    if (data.dwell) {
+      this.avgDwellTime = this.formatDwellTime(data.dwell.avgDwellMinutes);
+    }
+    if (data.occupancy && data.occupancy.buckets) {
+      this.updateOccupancyChart(data.occupancy.buckets, this.isViewingToday);
+    }
+    if (data.demographics && data.demographics.buckets) {
+      this.updateDemographicsChart(data.demographics.buckets, this.isViewingToday);
+    }
+  }
+  
+  private loadTrendsWithCache(siteId: string, siteName: string): void {
+    const yesterday = new Date(this.selectedDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Try to get cached trends
+    const cachedTrends = this.dashboardCache.getTrendCache(siteId, yesterday);
+    
+    if (cachedTrends) {
+      this.calculateAllTrends(cachedTrends.footfall, cachedTrends.dwellMinutes, cachedTrends.avgOccupancy);
+    } else {
+      // Load from API if not cached
+      this.loadYesterdayDataForTrends(siteId, siteName);
+    }
+  }
 
-  updateOccupancyChart(buckets: any[]) {
+  updateOccupancyChart(buckets: any[], isToday: boolean = true) {
     const hasData = buckets && buckets.length > 0;
     
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    // For historical dates, use end-of-day time; for today, use current time
+    let currentHour: number;
+    let currentMinute: number;
     
-    // Determine fixed time range based on current hour
+    if (!isToday) {
+      // Historical date: use 18:00 as the "current" time
+      currentHour = 18;
+      currentMinute = 0;
+    } else {
+      // Today: use actual current time
+      const now = new Date();
+      currentHour = now.getHours();
+      currentMinute = now.getMinutes();
+    }
+    
+    // Determine time range based on whether viewing today or historical date
     let startHour: number;
     let endHour: number;
     
-    if (currentHour >= 0 && currentHour < 8) {
-      startHour = 0;
-      endHour = 8;
-    } else {
+    if (!isToday) {
+      // Historical date: fixed 8 AM to 6 PM
       startHour = 8;
-      endHour = Math.max(18, currentHour + 3);
-    }
-    
-    // CRITICAL: If current time is past chart end, extend it
-    if (currentHour >= endHour) {
-      endHour = currentHour + 3;
+      endHour = 18;
+    } else {
+      // Today: dynamic range
+      if (currentHour >= 0 && currentHour < 8) {
+        startHour = 0;
+        endHour = 8;
+      } else {
+        startHour = 8;
+        endHour = Math.max(18, currentHour + 3);
+      }
+      
+      // If current time is past chart end, extend it
+      if (currentHour >= endHour) {
+        endHour = currentHour + 3;
+      }
     }
     
     // Store for marker updates
@@ -519,8 +607,8 @@ export class Dashboard implements OnInit, OnDestroy {
     // Create data points with Date objects for time scale
     const occupancyData: Array<{x: Date, y: number}> = [];
     const hourlyValues: Map<number, number> = new Map();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
+    const chartDate = new Date(this.selectedDate);
+    chartDate.setHours(0, 0, 0, 0);
     
     const parseTimestamp = (bucket: any): Date => {
       const tsString = bucket.local || bucket.ts || bucket.timestamp || bucket.time || bucket.date;
@@ -567,10 +655,10 @@ export class Dashboard implements OnInit, OnDestroy {
     }
     
     // Build continuous data from start to current time
-    let lastKnownValue = this.liveOccupancy > 0 ? this.liveOccupancy : 0;
+    let lastKnownValue = this.liveOccupancy > 0 && isToday ? this.liveOccupancy : 0;
     
     for (let hour = startHour; hour <= currentHour; hour++) {
-      const pointDate = new Date(today);
+      const pointDate = new Date(chartDate);
       pointDate.setHours(hour, 0, 0, 0);
       
       if (hourlyValues.has(hour)) {
@@ -580,15 +668,15 @@ export class Dashboard implements OnInit, OnDestroy {
       occupancyData.push({ x: pointDate, y: lastKnownValue });
     }
     
-    // Override current hour with live value
-    if (this.liveOccupancy > 0 && occupancyData.length > 0) {
+    // Override current hour with live value (only for today)
+    if (isToday && this.liveOccupancy > 0 && occupancyData.length > 0) {
       occupancyData[occupancyData.length - 1].y = this.liveOccupancy;
       lastKnownValue = this.liveOccupancy;
     }
     
-    // Add intermediate point at CURRENT TIME for continuous line
-    if (currentMinute > 0) {
-      const currentTimePoint = new Date(today);
+    // Add intermediate point at CURRENT TIME for continuous line (only for today)
+    if (isToday && currentMinute > 0) {
+      const currentTimePoint = new Date(chartDate);
       currentTimePoint.setHours(currentHour, currentMinute, 0, 0);
       occupancyData.push({
         x: currentTimePoint,
@@ -597,9 +685,9 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     // Set axis bounds
-    const minDate = new Date(today);
+    const minDate = new Date(chartDate);
     minDate.setHours(startHour, 0, 0, 0);
-    const maxDate = new Date(today);
+    const maxDate = new Date(chartDate);
     maxDate.setHours(endHour, 0, 0, 0);
     
     // Update chart data structure with bounds
@@ -622,37 +710,64 @@ export class Dashboard implements OnInit, OnDestroy {
     
     this.chartInitialized = true;
     
-    // Set initial marker position
-    if (occupancyData.length > 0) {
-      const lastPoint = occupancyData[occupancyData.length - 1];
-      const timestamp = new Date(lastPoint.x).getTime();
+    // Only show live marker and start timer for today
+    if (this.isViewingToday) {
+      // Set initial marker position
+      if (occupancyData.length > 0) {
+        const lastPoint = occupancyData[occupancyData.length - 1];
+        const timestamp = new Date(lastPoint.x).getTime();
+        
+        if (this.occupancyChartOptions.plugins?.annotation) {
+          const annotations = this.occupancyChartOptions.plugins.annotation.annotations as any;
+          if (annotations && annotations.liveMarker) {
+            annotations.liveMarker.display = true;  // Ensure marker is visible
+            annotations.liveMarker.xMin = timestamp;
+            annotations.liveMarker.xMax = timestamp;
+          }
+        }
+      }
       
+      this.startMarkerUpdateTimer();
+      
+      if (!this.socketSub || this.socketSub.closed || !this.socketService.isConnected()) {
+        this.setupRealtimeUpdates();
+      }
+    } else {
+      // Hide live marker for historical dates
       if (this.occupancyChartOptions.plugins?.annotation) {
         const annotations = this.occupancyChartOptions.plugins.annotation.annotations as any;
         if (annotations && annotations.liveMarker) {
-          annotations.liveMarker.xMin = timestamp;
-          annotations.liveMarker.xMax = timestamp;
+          annotations.liveMarker.display = false;
         }
       }
     }
-    
-    this.startMarkerUpdateTimer();
-    
-    if (!this.socketSub || this.socketSub.closed || !this.socketService.isConnected()) {
-      this.setupRealtimeUpdates();
-    }
   }
 
-  updateDemographicsChart(buckets: any[]) {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+  updateDemographicsChart(buckets: any[], isToday: boolean = true) {
+    // For historical dates, use end-of-day time; for today, use current time
+    let currentHour: number;
+    let currentMinute: number;
+    
+    if (!isToday) {
+      // Historical date: use 18:00 as the "current" time
+      currentHour = 18;
+      currentMinute = 0;
+    } else {
+      // Today: use actual current time
+      const now = new Date();
+      currentHour = now.getHours();
+      currentMinute = now.getMinutes();
+    }
     
     // Determine timestamp range
     let startHour: number;
     let endHour: number;
     
-    if (currentHour >= 0 && currentHour < 8) {
+    if (!isToday) {
+      // Historical date: fixed 8 AM to 6 PM
+      startHour = 8;
+      endHour = 18;
+    } else if (currentHour >= 0 && currentHour < 8) {
       startHour = 0;
       endHour = 8;
     } else {
@@ -665,8 +780,8 @@ export class Dashboard implements OnInit, OnDestroy {
     const femaleData: Array<{x: Date, y: number}> = [];
     const hourlyMaleValues: Map<number, number> = new Map();
     const hourlyFemaleValues: Map<number, number> = new Map();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const chartDate = new Date(this.selectedDate);
+    chartDate.setHours(0, 0, 0, 0);
     
     // Variables for donut chart totals
     let totalMale = 0;
@@ -725,7 +840,7 @@ export class Dashboard implements OnInit, OnDestroy {
     
     // First, add all hourly data points from historical buckets
     for (let hour = startHour; hour <= endHour; hour++) {
-      const pointDate = new Date(today);
+      const pointDate = new Date(chartDate);
       pointDate.setHours(hour, 0, 0, 0);
       
       // Update values if we have data for this hour
@@ -743,9 +858,9 @@ export class Dashboard implements OnInit, OnDestroy {
       }
     }
     
-    // Add current time point if we're in the middle of an hour
-    if (currentMinute > 0 && currentHour >= startHour && currentHour <= endHour) {
-      const currentTimePoint = new Date(today);
+    // Add current time point if we're in the middle of an hour (only for today)
+    if (isToday && currentMinute > 0 && currentHour >= startHour && currentHour <= endHour) {
+      const currentTimePoint = new Date(chartDate);
       currentTimePoint.setHours(currentHour, currentMinute, 0, 0);
       maleData.push({ x: currentTimePoint, y: lastMaleValue });
       femaleData.push({ x: currentTimePoint, y: lastFemaleValue });
@@ -756,9 +871,9 @@ export class Dashboard implements OnInit, OnDestroy {
     this.demographicsLineChartData.datasets[1].data = femaleData;
     
     // Set axis bounds
-    const minDate = new Date(today);
+    const minDate = new Date(chartDate);
     minDate.setHours(startHour, 0, 0, 0);
-    const maxDate = new Date(today);
+    const maxDate = new Date(chartDate);
     maxDate.setHours(endHour, 0, 0, 0);
     
     this.demographicsLineChartOptions = {
@@ -800,20 +915,14 @@ export class Dashboard implements OnInit, OnDestroy {
     
     const yesterday = new Date(this.selectedDate);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayDateKey = yesterday.toDateString();
     
-    // Check cache first
-    if (this.yesterdayDataCache && this.yesterdayDataCache.date === yesterdayDateKey) {
-      console.log('� Using cached yesterday\'s data for trends');
-      this.calculateAllTrends(
-        this.yesterdayDataCache.footfall,
-        this.yesterdayDataCache.dwellMinutes,
-        this.yesterdayDataCache.avgOccupancy
-      );
+    // Check service cache first
+    const cachedTrends = this.dashboardCache.getTrendCache(siteId, yesterday);
+    if (cachedTrends) {
+      this.calculateAllTrends(cachedTrends.footfall, cachedTrends.dwellMinutes, cachedTrends.avgOccupancy);
       return;
     }
     
-    console.log('Loading yesterday\'s data for trend comparison:', yesterdayDateKey);
     this.trendCalculationInProgress = true;
     
     // Load yesterday's data
@@ -826,22 +935,16 @@ export class Dashboard implements OnInit, OnDestroy {
           ? this.calculateAverageOccupancy(yesterdayData.occupancy.buckets) 
           : 0;
         
-        // Cache the data
-        this.yesterdayDataCache = {
-          date: yesterdayDateKey,
-          footfall: yesterdayFootfall,
-          dwellMinutes: yesterdayDwell,
-          avgOccupancy: yesterdayAvg
-        };
+        // Cache in service for reuse
+        this.dashboardCache.setTrendCache(siteId, yesterday, yesterdayFootfall, yesterdayDwell, yesterdayAvg);
         
         // Calculate trends
         this.calculateAllTrends(yesterdayFootfall, yesterdayDwell, yesterdayAvg);
         this.trendCalculationInProgress = false;
       },
       error: (err) => {
-        console.warn('Could not load yesterday\'s data for trends:', err);
+        console.error('Could not load yesterday\'s data for trends:', err);
         this.trendCalculationInProgress = false;
-        // Keep default trend values (0, 'up') - indicates no data available
       }
     });
   }
@@ -997,6 +1100,18 @@ export class Dashboard implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
   }
   
+  private checkIsToday(date: Date): boolean {
+    const today = new Date();
+    return date.getFullYear() === today.getFullYear() &&
+           date.getMonth() === today.getMonth() &&
+           date.getDate() === today.getDate();
+  }
+  
+  private clearTrendCache(): void {
+    // Clear component-level yesterday cache (deprecated, using service cache now)
+    this.yesterdayDataCache = null;
+  }
+
   private applyCachedData(cached: any): void {
     // Apply footfall
     if (cached.footfall) {
@@ -1010,43 +1125,45 @@ export class Dashboard implements OnInit, OnDestroy {
     
     // Apply occupancy chart
     if (cached.occupancy && cached.occupancy.buckets) {
-      this.updateOccupancyChart(cached.occupancy.buckets);
+      this.updateOccupancyChart(cached.occupancy.buckets, this.isViewingToday);
     }
     
     // Apply demographics
     if (cached.demographics && cached.demographics.buckets) {
-      this.updateDemographicsChart(cached.demographics.buckets);
+      this.updateDemographicsChart(cached.demographics.buckets, this.isViewingToday);
     }
     
-    // Load trends for cached data (if not already loaded)
-    if (this.currentSiteId && this.occupancyTrend.percentage === 0 && this.footfallTrend.percentage === 0) {
-      this.loadYesterdayDataForTrends(this.currentSiteId, this.siteName);
-    }
+    // Note: Trends are loaded separately by loadTrendsWithCache() in loadDashboardData()
   }
 
   onDateChange(date: Date | null): void {
     if (!date) return;
     
+    console.log('[Dashboard] Date changed to:', date.toDateString());
     this.selectedDate = date;
     this.updateDateDisplayText();
     
-    // Clear yesterday's data cache since we're changing dates
-    this.clearTrendCache();
+    // Check if viewing today or historical date
+    this.isViewingToday = this.checkIsToday(date);
     
-    // Reload dashboard data for selected date
-    if (this.currentSiteId) {
-      console.log('Reloading dashboard for site:', this.currentSiteId);
-      this.loadDashboardData(this.currentSiteId, this.siteName);
-      
-      // Also preload entry-exit data for new date
-      console.log('Preloading entry-exit data for new date');
-      this.entryCacheService.clearCache();
-      this.entryCacheService.preloadData(this.currentSiteId, this.selectedDate);
-      
-      // Clear dashboard cache too
-      this.dashboardCache.clearCache();
+    // Stop live updates if switching from today to historical date
+    if (!this.isViewingToday) {
+      if (this.socketSub) {
+        this.socketSub.unsubscribe();
+        this.socketSub = undefined;
+      }
+      if (this.markerTimerSub) {
+        this.markerTimerSub.unsubscribe();
+        this.markerTimerSub = undefined;
+      }
     } else {
-      console.warn('No site selected, cannot reload dashboard');
+      // Start live updates if switching to today
+      this.setupRealtimeUpdates();
+    }
+    
+    // Reload dashboard data for selected date (cache will be checked)
+    if (this.currentSiteId) {
+      this.loadDashboardData(this.currentSiteId, this.siteName);
     }
   }
 
@@ -1423,11 +1540,6 @@ export class Dashboard implements OnInit, OnDestroy {
     this.clearTrendCache();
     
     // DO NOT disconnect socket or unsubscribe - keep it alive for smooth navigation
-  }
-  
-  private clearTrendCache(): void {
-    this.yesterdayDataCache = null;
-    this.trendCalculationInProgress = false;
   }
   
   /**
