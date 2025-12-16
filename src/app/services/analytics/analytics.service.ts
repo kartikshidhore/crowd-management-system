@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError, timer } from 'rxjs';
 import { retryWhen, mergeMap, timeout, catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AnalyticsService {
   // Relative path so Angular Proxy handles it
-  private baseUrl = '/api'; 
+  private baseUrl = environment.apiUrl; 
 
   constructor(private http: HttpClient) {}
 

@@ -1,0 +1,3 @@
+/api/*  https://hiring-dev.internal.kloudspot.com/api/:splat  200
+/socket.io/*  https://hiring-dev.internal.kloudspot.com/socket.io/:splat  200
+/* /index.html 200
