@@ -40,7 +40,7 @@ The Crowd Management System provides facility managers with real-time insights i
 
 ### Data Visualization
 - **Chart.js 4.5** - Powerful charting library
-- **ng2-charts 8.0** - Angular wrapper for Chart.js
+- **ng2-charts 6.0** - Angular wrapper for Chart.js
 - **chartjs-plugin-annotation 3.1** - Live marker annotations
 - **chartjs-adapter-date-fns 3.0** - Time-scale support
 
