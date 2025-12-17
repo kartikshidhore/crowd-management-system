@@ -43,6 +43,8 @@ $text-light: #777;
 
 .app-sidenav {
   width: 250px;
+  min-width: 250px;
+  max-width: 250px;
   background: $teal-dark;
   background-image: url('/Clip path group.svg');
   background-size: cover;
@@ -54,12 +56,42 @@ $text-light: #777;
   transition: width 0.3s ease;
   overflow: hidden !important;
   overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { display: none; }
   z-index: 1000;
   flex-shrink: 0 !important;
   box-sizing: border-box !important;
 
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    .logo-area {
+      flex: 1;
+      .brand-logo {
+        max-height: 60px;
+        width: auto;
+        object-fit: contain;
+      }
+    }
+
+    .toggle-btn {
+      color: white;
+      flex-shrink: 0;
+    }
+  }
+
   &.collapsed {
     width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
 
     .sidebar-header {
       justify-content: center;
@@ -98,6 +130,72 @@ $text-light: #777;
         gap: 0 !important;
       }
     }
+  }
+
+
+
+  mat-nav-list {
+    padding: 20px 0;
+  }
+
+  .nav-item {
+    color: white !important;
+    margin: 5px 15px;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    
+    span {
+      color: white !important;
+    }
+    
+    mat-icon {
+      color: white !important;
+      margin-right: 10px;
+    }
+    
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      filter: brightness(0) invert(1);
+    }
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    &.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: white !important;
+      border-left: 4px solid $teal;
+    }
+  }
+
+  ::ng-deep .mat-drawer::-webkit-scrollbar,
+  ::ng-deep .mat-drawer-container::-webkit-scrollbar,
+  ::ng-deep .mat-drawer-content::-webkit-scrollbar,
+  .app-sidenav ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  ::ng-deep .mat-sidenav-wrapper,
+  ::ng-deep .mat-sidenav-inner-container,
+  ::ng-deep .mat-drawer-inner-container {
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+  }
+
+  .app-sidenav .nav-item {
+    margin-right: 0 !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .sidebar-header {
