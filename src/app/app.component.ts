@@ -8,7 +8,7 @@ import { AuthService } from './services/auth/auth.service';
   styleUrl: './app.component.scss'
 })
 export class App {
-  protected readonly title = signal('crowd-management-system');
+  //protected readonly title = signal('crowd-management-system');
 
   constructor(private authService: AuthService) {}
 

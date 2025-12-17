@@ -4,21 +4,15 @@ import { Router } from '@angular/router';
 import { tap, retryWhen, mergeMap, timeout } from 'rxjs/operators';
 import { throwError, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { SiteService } from '../site/site.service';
-import { DashboardCacheService } from '../dashboard-cache/dashboard-cache.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  //proxy path "/api"
   private apiURL = `${environment.apiUrl}/auth/login`;
-
   constructor(
     private http : HttpClient, 
-    private router : Router,
-    private siteService: SiteService,
-    private dashboardCache: DashboardCacheService
+    private router : Router
   ) {}
 
   login(creds: {email: string, password: string}) {
@@ -38,7 +32,6 @@ export class AuthService {
       tap( response => {
         if(response.token){
           localStorage.setItem('auth_token', response.token);
-          // Store email for user profile display
           localStorage.setItem('user_email', creds.email);
         }
       })
@@ -56,11 +49,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_email');
-    
-    // Clear all cached data
-    this.siteService.clearCache();
-    this.dashboardCache.clearCache();
-    
+    // this.dashboardCache.clearCache();
     this.router.navigate(['/login']);
   }
 }

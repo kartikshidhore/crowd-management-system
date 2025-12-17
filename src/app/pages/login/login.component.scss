@@ -1,16 +1,12 @@
-// --- 1. FONTS & RESETS ---
-
 :host {
   font-family: 'IBM Plex Sans', sans-serif;
   display: block; 
 }
 
-// --- 2. MAIN LAYOUT (Matches .login-page-container) ---
 .login-page-container {
   position: relative;
   height: 100vh;
   width: 100vw;
-  // Background Image
   background-image: url('/Login_background_img.png');
   background-size: cover;
   background-position: center;
@@ -19,7 +15,6 @@
   justify-content: center;
   overflow: hidden;
 
-  // Dark Overlay
   .background-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -28,7 +23,6 @@
   }
 }
 
-// --- 3. CONTENT WRAPPER (Matches .content-wrapper) ---
 .content-wrapper {
   position: relative;
   z-index: 2;
@@ -39,7 +33,6 @@
   justify-content: space-between;
   align-items: center;
 
-  // Mobile: Stack vertically
   @media (max-width: 960px) {
     flex-direction: column;
     justify-content: center;
@@ -47,7 +40,6 @@
   }
 }
 
-// --- 4. LEFT SIDE TEXT (Matches .welcome-section) ---
 .welcome-section {
   flex: 1;
   color: white;
@@ -63,20 +55,18 @@
   }
 
   @media (max-width: 960px) {
-    display: none; // Hide text on mobile for cleaner look
+    display: none; 
   }
 }
 
-// --- 5. LOGIN CARD (Matches .login-card) ---
 .login-card {
   width: 400px;
   max-width: 100%;
   background: white;
   border-radius: 8px;
-  overflow: hidden; // Keeps header corners rounded
-  padding: 0; // Reset default Material padding
+  overflow: hidden;
+  padding: 0; 
 
-  // CARD HEADER (Matches .login-card-header)
   .login-card-header {
     background-color: #0A5D5C;
     background-image: url('/Clip path group.svg');
@@ -102,27 +92,21 @@
     }
   }
 
-  // CARD CONTENT
   mat-card-content {
     padding: 24px 24px;
     
     .login-form {
       display: flex;
       flex-direction: column;
-      gap: 10px; // Spacing between inputs
+      gap: 10px; 
     }
   }
 }
-
-// --- 6. INPUT FIELDS (Material Overrides) ---
-// Since you used <mat-form-field appearance="outline">, 
-// we don't need manual label positioning. We just style the basics.
 
 .w-100 {
   width: 100%;
 }
 
-// Error Message Text
 .error-message {
   color: #f44336;
   font-size: 14px;
@@ -131,13 +115,12 @@
   text-align: center;
 }
 
-// --- 7. LOGIN BUTTON (Matches .login-button) ---
 .login-button {
   height: 40px;
-  font-size: 0.95rem !important; // Force size override
+  font-size: 0.95rem !important;
   font-weight: 500;
   letter-spacing: 0.5px;
-  background-color: #009688 !important; // Bright Teal
+  background-color: #009688 !important;
   color: white !important;
   margin-top: 4px;
   

@@ -9,8 +9,6 @@ export const authGuard = () => {
   if (authService.isLoggedIn()) {
     return true;
   }
-
-  // Redirect to login if not authenticated
   router.navigate(['/login']);
   return false;
 };

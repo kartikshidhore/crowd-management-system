@@ -1,11 +1,8 @@
-// --- COLORS ---
 $teal: #009688;
 $teal-dark: #103a3a;
 $bg-light: #f5f7f9;
 $text-dark: #333;
 $text-light: #777;
-
-// --- LAYOUT ---
 .sidenav-container { 
   height: 100vh !important;
   display: flex !important;
@@ -42,8 +39,6 @@ $text-light: #777;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
-
-// --- LEFT SIDEBAR ---
 .app-sidenav {
   width: 250px;
   background: $teal-dark;
@@ -182,8 +177,6 @@ $text-light: #777;
     }
   }
 }
-
-// --- MAIN CONTENT ---
 .main-content { 
   background: $bg-light;
   position: relative;
@@ -198,8 +191,6 @@ $text-light: #777;
     overflow: hidden !important;
   }
 }
-
-// --- LOADER OVERLAY ---
 .loader-overlay {
   position: fixed;
   top: 0;
@@ -308,8 +299,6 @@ $text-light: #777;
     h1 { margin: 0; font-size: 1.5rem; font-weight: 500; }
   }
 }
-
-// --- SECTION TITLES ---
 .section-title {
   font-size: 1.3rem;
   font-weight: 600;
@@ -318,8 +307,6 @@ $text-light: #777;
   margin-top: 30px;
   font-family: 'IBM Plex Sans', sans-serif;
 }
-
-// --- STATS CARDS ---
 .stats-grid {
   display: grid; 
   grid-template-columns: repeat(3, 1fr); 
@@ -338,14 +325,10 @@ $text-light: #777;
     mat-icon { font-size: 16px; width: 16px; height: 16px; }
   }
 }
-
-// --- CHARTS SECTION (THE FIX IS HERE) ---
-
-// 1. Force the cards to shrink if screen gets small
 .chart-card {
   padding: 20px;
-  min-width: 0; // <--- VITAL: Prevents chart from forcing card wider
-  overflow: hidden; // Cuts off overflow
+  min-width: 0; 
+  overflow: hidden; 
   box-sizing: border-box;
   width: 100%;
   
@@ -431,20 +414,16 @@ $text-light: #777;
     }
   }
 }
-
-// 2. The Split Grid (Donut vs Line)
 .demographics-section { 
   h3 { margin-bottom: 20px; } 
 }
 
 .split-grid {
   display: grid; 
-  grid-template-columns: 1fr 2fr; // 1/3 Donut, 2/3 Analysis
+  grid-template-columns: 1fr 2fr; 
   gap: 20px;
-  align-items: start; // Prevents height stretching
+  align-items: start; 
 }
-
-// 3. Chart Containers (Fixed Heights)
 .chart-wrapper-large { 
   position: relative; 
   height: 300px; 
@@ -454,14 +433,14 @@ $text-light: #777;
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 0; // Will be overridden by inline style
+    left: 0; 
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     pointer-events: none;
     z-index: 10;
-    transition: left 0.3s ease-out; // Smooth movement
+    transition: left 0.3s ease-out; 
     
     .live-badge-vertical {
       background: #d32f2f;
@@ -505,11 +484,9 @@ $text-light: #777;
   height: 250px; 
   width: 100%;
 }
-
-// 4. Donut Specifics
 .donut-wrapper {
   position: relative; 
-  height: 220px; // Fixed height stops the "pancake" squish
+  height: 220px; 
   width: 100%;
   display: flex; 
   justify-content: center;
@@ -521,7 +498,7 @@ $text-light: #777;
     top: 50%; left: 50%; 
     transform: translate(-50%, -50%);
     text-align: center;
-    pointer-events: none; // Click through text to chart segments
+    pointer-events: none; 
     
     .label { display: block; font-size: 0.8rem; color: #999; }
     .val { display: block; font-size: 1.2rem; font-weight: 700; }
@@ -548,15 +525,11 @@ $text-light: #777;
     }
   }
 }
-
-// --- MOBILE RESPONSIVENESS ---
 @media(max-width: 960px) {
-  // Stack everything on mobile
   .stats-grid, .split-grid { 
     grid-template-columns: 1fr; 
   }
   
-  // Shrink Sidebar
   .app-sidenav { 
     width: 70px; 
     .brand, .nav-item span, .logout-btn { display: none; } 

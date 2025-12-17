@@ -1,22 +1,16 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
-
-// Services
 import { AnalyticsService } from '../../services/analytics/analytics.service';
 import { SiteService } from '../../services/site/site.service';
-import { EntryExitCacheService } from '../../services/entry-exit-cache/entry-exit-cache.service';
 import { CleanupService } from '../../services/cleanup/cleanup.service';
 import { AuthService } from '../../services/auth/auth.service';
 import { Router } from '@angular/router';
-
-// Components
 import { NavbarComponent } from '../../components/navbar/navbar.component';
 import { AlertsSidebarComponent } from '../../components/alerts-sidebar/alerts-sidebar.component';
 
-// Material Imports
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,6 +37,7 @@ interface EntryExitRecord {
 @Component({
   selector: 'app-crowd-entries',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,
@@ -63,46 +58,32 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
   currentSiteId: string = '';
   siteName = 'Loading...';
   
-  // Date Selection
   selectedDate: Date = new Date();
   maxDate: Date = new Date();
   dateDisplayText: string = 'Today';
-  
-  // Table Data
   displayedColumns: string[] = ['name', 'sex', 'entry', 'exit', 'dwellTime'];
   allRecords: EntryExitRecord[] = [];
   displayedRecords: EntryExitRecord[] = [];
   
-  // Pagination
   pageSize = 50;
   pageIndex = 0;
   totalRecords = 0;
   totalPages = 0;
-  isLoading = false; // Loading state for API calls
-  
+  isLoading = false;
   private siteSub?: Subscription;
   private cacheSub?: Subscription;
 
   constructor(
     private analyticsService: AnalyticsService,
     private siteService: SiteService,
-    private cacheService: EntryExitCacheService,
     private cleanupService: CleanupService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.updateDateDisplayText();
-    
-    // Subscribe to cached data
-    this.cacheSub = this.cacheService.cache$.subscribe(cachedData => {
-      if (cachedData) {
-        this.processEntryExitData(cachedData);
-      }
-    });
-    
-    // Subscribe to site changes
     this.siteSub = this.siteService.currentSite$.subscribe(site => {
       if (site) {
         const siteChanged = this.currentSiteId && this.currentSiteId !== site.siteId;
@@ -111,30 +92,36 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
         this.siteName = site.name;
         
         if (siteChanged) {
-          // Clear cache when site changes
-          this.cacheService.clearCache();
           this.pageIndex = 0;
           this.loadEntryExitData(1);
         } else {
-          // Initial load - check for cached data
-          const cachedData = this.cacheService.getCachedData();
-          if (cachedData && cachedData.siteId === site.siteId) {
-            this.processEntryExitData(cachedData);
-          } else {
-            this.loadEntryExitData(1);
-          }
+          this.loadEntryExitData(1);
         }
       }
     });
   }
 
   loadEntryExitData(pageNumber: number = 1) {
-    this.isLoading = true;
+    if (!this.currentSiteId) return;
     
-    this.cacheService.loadData(this.currentSiteId, this.selectedDate, pageNumber, this.pageSize).subscribe({
+    this.isLoading = true;
+    this.cdr.detectChanges();
+    const now = Date.now();
+    const selectedYear = this.selectedDate.getFullYear();
+    const selectedMonth = this.selectedDate.getMonth();
+    const selectedDay = this.selectedDate.getDate();
+    const fromUtc = new Date(selectedYear, selectedMonth, selectedDay, 0, 0, 0, 0).getTime();
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+    const isToday = fromUtc === todayStart;
+    const toUtc = isToday ? now : new Date(selectedYear, selectedMonth, selectedDay, 23, 59, 59, 999).getTime();
+    
+    const payload = { siteId: this.currentSiteId, fromUtc, toUtc };
+    
+    this.analyticsService.getEntryExitPaginated(payload, pageNumber, this.pageSize).subscribe({
       next: (response) => {
         this.processEntryExitData(response);
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Entry-Exit API failed:', err);
@@ -143,21 +130,17 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
         this.totalRecords = 0;
         this.totalPages = 0;
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
 
   processEntryExitData(response: any) {
-    // Process API response and map to table records
     const records = response.records || [];
-    
-    // Map records with correct field names from API
     this.displayedRecords = records.map((record: any) => {
-      // Use entryLocal and exitLocal (capital L) from API - format to time only with AM/PM
       const entryTime = this.formatTimeOnly(record.entryLocal || null);
       const exitTime = this.formatTimeOnly(record.exitLocal || null);
       
-      // Format dwell time from dwellMinutes to HH:MM format (hours:minutes)
       let dwellTimeFormatted = '--';
       if (record.dwellMinutes != null && record.dwellMinutes > 0) {
         const hours = Math.floor(record.dwellMinutes / 60);
@@ -174,11 +157,9 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
         avatar: record.avatar || undefined
       };
     });
-    
-    // Update pagination from API response
     this.totalRecords = response.totalRecords || 0;
     this.totalPages = response.totalPages || 0;
-    this.pageIndex = (response.pageNumber || 1) - 1; // Convert to 0-based
+    this.pageIndex = (response.pageNumber || 1) - 1; 
     this.pageSize = response.pageSize || 50;
   }
 
@@ -191,12 +172,12 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
   onPageChange(event: PageEvent) {
     this.pageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
-    this.loadEntryExitData(event.pageIndex + 1); // API uses 1-based page numbers
+    this.loadEntryExitData(event.pageIndex + 1); 
   }
   goToPage(pageNumber: number) {
     if (pageNumber >= 0 && pageNumber < this.totalPages) {
       this.pageIndex = pageNumber;
-      this.loadEntryExitData(pageNumber + 1); // API uses 1-based page numbers
+      this.loadEntryExitData(pageNumber + 1);
     }
   }
 
@@ -211,19 +192,15 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     const currentPage = this.pageIndex + 1;
     
     if (this.totalPages <= 7) {
-      // Show all pages if total is 7 or less
       for (let i = 1; i <= this.totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
       
       if (currentPage > 3) {
         pages.push('...');
       }
-      
-      // Show pages around current page
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(this.totalPages - 1, currentPage + 1);
       
@@ -234,33 +211,33 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
       if (currentPage < this.totalPages - 2) {
         pages.push('...');
       }
-      
-      // Always show last page
       pages.push(this.totalPages);
     }
     
     return pages;
   }
-  createPayload() {
+  createPayload(siteId: string, selectedDate: Date, pageNumber: number, pageSize: number) {
     const today = new Date();
     const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const selectedDateOnly = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth(), this.selectedDate.getDate());
+    const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     
     const isToday = todayDateOnly.getTime() === selectedDateOnly.getTime();
     
-    const fromUtc = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth(), this.selectedDate.getDate(), 0, 0, 0, 0).getTime();
+    const fromUtc = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0).getTime();
     
     let toUtc: number;
     if (isToday) {
       toUtc = today.getTime();
     } else {
-      toUtc = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth(), this.selectedDate.getDate(), 23, 59, 59, 999).getTime();
+      toUtc = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999).getTime();
     }
 
     return {
-      siteId: this.currentSiteId,
+      siteId: siteId,
       fromUtc: fromUtc,
-      toUtc: toUtc
+      toUtc: toUtc,
+      pageNumber: pageNumber,
+      pageSize: pageSize
     };
   }
 
@@ -269,14 +246,12 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     
     this.selectedDate = date;
     this.updateDateDisplayText();
-    
-    // Clear cache and reset to first page
-    this.cacheService.clearCache();
     this.pageIndex = 0;
     
     if (this.currentSiteId) {
       this.loadEntryExitData(1);
     }
+    this.cdr.detectChanges();
   }
 
   updateDateDisplayText() {
@@ -307,11 +282,8 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    // Trigger cleanup across all components
     this.cleanupService.triggerLogout();
-    // Call auth service logout
     this.authService.logout();
-    // Navigate to login
     this.router.navigate(['/login']);
   }
 
@@ -331,21 +303,17 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     if (!timeString || timeString === '--') return '--';
     
     try {
-      // Try to parse the time string
-      // Expected format from API: "2024-12-15T11:05:00" or similar ISO format
       const date = new Date(timeString);
       
       if (isNaN(date.getTime())) {
-        // If parsing fails, return as-is
         return timeString;
       }
       
-      // Format as 12-hour time with AM/PM
       let hours = date.getHours();
       const minutes = date.getMinutes();
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
-      hours = hours ? hours : 12; // Convert 0 to 12
+      hours = hours ? hours : 12;
       const minutesStr = String(minutes).padStart(2, '0');
       
       return `${hours}:${minutesStr} ${ampm}`;
@@ -358,11 +326,10 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
     if (!timeString || timeString === '--') return '--';
     
     try {
-      // Handle format: "14/12/2025 21:43:20" (DD/MM/YYYY HH:MM:SS)
       const parts = timeString.split(' ');
       if (parts.length !== 2) return '--';
       
-      const timePart = parts[1]; // "21:43:20"
+      const timePart = parts[1];
       const timeComponents = timePart.split(':');
       if (timeComponents.length < 2) return '--';
       
@@ -370,11 +337,9 @@ export class CrowdEntriesComponent implements OnInit, OnDestroy {
       const minutes = parseInt(timeComponents[1], 10);
       
       if (isNaN(hours) || isNaN(minutes)) return '--';
-      
-      // Convert to 12-hour format with AM/PM
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
-      hours = hours ? hours : 12; // Convert 0 to 12
+      hours = hours ? hours : 12;
       const minutesStr = String(minutes).padStart(2, '0');
       
       return `${hours}:${minutesStr} ${ampm}`;

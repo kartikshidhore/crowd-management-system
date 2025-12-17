@@ -1,5 +1,4 @@
 <mat-toolbar class="main-navbar">
-  <!-- Left: Crowd Solutions Text + Site Selector -->
   <div class="navbar-left">
     <span class="brand-text">Crowd Solutions</span>
     <span class="divider">|</span>
@@ -18,9 +17,7 @@
     </div>
   </div>
 
-  <!-- Right: Controls -->
   <div class="navbar-right">
-    <!-- Language Toggle Switch -->
     <div class="lang-toggle">
       <div class="toggle-track">
         <div class="toggle-thumb">
@@ -30,13 +27,11 @@
       </div>
     </div>
 
-    <!-- Alerts Bell with Badge -->
     <button mat-icon-button class="alerts-btn" (click)="toggleAlerts()">
       <img src="Bell.svg" alt="Notifications" class="bell-icon">
       <span class="badge" *ngIf="unseenAlertsCount > 0"></span>
     </button>
 
-    <!-- User Avatar with Tooltip -->
     <div class="user-avatar" [matTooltip]="userEmail">
       {{ userInitial }}
     </div>

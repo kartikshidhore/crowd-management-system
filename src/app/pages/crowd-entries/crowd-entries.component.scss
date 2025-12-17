@@ -1,11 +1,9 @@
-// --- COLORS ---
 $teal: #009688;
 $teal-dark: #103a3a;
 $bg-light: #f5f7f9;
 $text-dark: #333;
 $text-light: #777;
 
-// --- LAYOUT ---
 .sidenav-container { 
   height: 100vh !important;
   display: flex !important;
@@ -43,7 +41,6 @@ $text-light: #777;
   box-sizing: border-box !important;
 }
 
-// --- LEFT SIDEBAR ---
 .app-sidenav {
   width: 250px;
   background: $teal-dark;
@@ -189,7 +186,6 @@ $text-light: #777;
   }
 }
 
-// --- MAIN CONTENT ---
 .main-content {
   background: $bg-light;
   position: relative;
@@ -205,7 +201,6 @@ $text-light: #777;
   }
 }
 
-// --- LOADER OVERLAY ---
 .loader-overlay {
   position: fixed;
   top: 0;
@@ -286,7 +281,6 @@ $text-light: #777;
   }
 }
 
-// --- TABLE CARD ---
 .entries-table-card {
   background: white;
   border-radius: 8px;
@@ -297,7 +291,6 @@ $text-light: #777;
   box-sizing: border-box;
 }
 
-// --- TABLE STYLING ---
 .entries-table {
   width: 100%;
   background: white;
@@ -381,8 +374,6 @@ $text-light: #777;
     }
   }
 }
-
-// --- CUSTOM PAGINATOR ---
 .custom-paginator {
   display: flex;
   justify-content: center;

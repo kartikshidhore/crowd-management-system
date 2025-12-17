@@ -1,12 +1,10 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth/auth.service';
-import { EntryExitCacheService } from '../../services/entry-exit-cache/entry-exit-cache.service';
 import { SiteService } from '../../services/site/site.service';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
-
 
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
@@ -22,7 +20,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   styleUrl: './login.component.scss',
   imports: [
       CommonModule,
-      FormsModule,
       MatCardModule,
       MatInputModule,
       MatButtonModule,
@@ -43,7 +40,6 @@ export class Login {
     private auth : AuthService,
     private router : Router,
     private cdr : ChangeDetectorRef,
-    private cacheService: EntryExitCacheService,
     private siteService: SiteService
   ) {
     this.loginForm = this.fb.group({
@@ -65,7 +61,6 @@ export class Login {
       email : this.loginForm.value.username,
       password : this.loginForm.value.password
     }
-    //Calling AuthService
     this.auth.login(payload)
     .pipe(
       finalize(() => {

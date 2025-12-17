@@ -51,31 +51,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Get user email for avatar
+
     const email = this.authService.getEmail();
     if (email) {
       this.userEmail = email;
       this.userInitial = email.charAt(0).toUpperCase();
     }
-
-    // Load sites
     this.siteService.loadSites().subscribe((sites) => {
       this.sites = sites;
     });
-    
-    // Subscribe to current site changes
     this.siteSub = this.siteService.currentSite$.subscribe(site => {
       if (site) {
         this.selectedSiteId = site.siteId;
       }
     });
-
-    // Subscribe to unseen alerts count
     this.alertsSub = this.alertsService.unseenCount$.subscribe(count => {
       this.unseenAlertsCount = count;
     });
-
-    // Listen to socket alerts
     this.socketSub = this.socketService.getAlerts().subscribe((data: any) => {
       if (data) {
         this.alertsService.addAlert({

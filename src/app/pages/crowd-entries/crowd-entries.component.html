@@ -28,13 +28,10 @@
       </button>
     </div>
   </mat-sidenav>
-
   <mat-sidenav-content class="main-content" [class.loading]="isLoading">
     
-    <!-- Top Navbar -->
     <app-navbar></app-navbar>
     
-    <!-- Loader Overlay -->
     <div class="loader-overlay" *ngIf="isLoading">
       <mat-spinner diameter="60"></mat-spinner>
     </div>
@@ -60,8 +57,7 @@
 
       <mat-card class="entries-table-card">
         <table mat-table [dataSource]="displayedRecords" class="entries-table">
-          
-          <!-- Name Column -->
+ 
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef>Name</th>
             <td mat-cell *matCellDef="let record" class="name-cell">
@@ -77,25 +73,21 @@
             </td>
           </ng-container>
 
-          <!-- Sex Column -->
           <ng-container matColumnDef="sex">
             <th mat-header-cell *matHeaderCellDef>Sex</th>
             <td mat-cell *matCellDef="let record">{{ formatSex(record.sex) }}</td>
           </ng-container>
 
-          <!-- Entry Column -->
           <ng-container matColumnDef="entry">
             <th mat-header-cell *matHeaderCellDef>Entry</th>
             <td mat-cell *matCellDef="let record">{{ record.entry }}</td>
           </ng-container>
 
-          <!-- Exit Column -->
           <ng-container matColumnDef="exit">
             <th mat-header-cell *matHeaderCellDef>Exit</th>
             <td mat-cell *matCellDef="let record">{{ record.exit }}</td>
           </ng-container>
 
-          <!-- Dwell Time Column -->
           <ng-container matColumnDef="dwellTime">
             <th mat-header-cell *matHeaderCellDef>Dwell Time</th>
             <td mat-cell *matCellDef="let record">{{ record.dwellTime }}</td>
@@ -106,7 +98,6 @@
         </table>
       </mat-card>
 
-      <!-- Custom Pagination -->
       <div class="custom-paginator">
         <button mat-icon-button (click)="goToPage(pageIndex - 1)" [disabled]="pageIndex === 0">
           <mat-icon>chevron_left</mat-icon>
@@ -131,5 +122,4 @@
   </mat-sidenav-content>
 </mat-sidenav-container>
 
-<!-- Alerts Sidebar -->
 <app-alerts-sidebar></app-alerts-sidebar>

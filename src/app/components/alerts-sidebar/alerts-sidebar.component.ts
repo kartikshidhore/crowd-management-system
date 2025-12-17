@@ -1,10 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
-
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-
 import { AlertsService, Alert } from '../../services/alerts/alerts.service';
 
 @Component({
@@ -28,12 +26,9 @@ export class AlertsSidebarComponent implements OnInit, OnDestroy {
   constructor(private alertsService: AlertsService) {}
 
   ngOnInit() {
-    // Subscribe to sidebar state
     this.sidebarSub = this.alertsService.sidebarOpen$.subscribe(open => {
       this.isOpen = open;
     });
-
-    // Subscribe to alerts
     this.alertsSub = this.alertsService.alerts$.subscribe(alerts => {
       this.alerts = alerts;
     });

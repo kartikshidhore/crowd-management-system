@@ -29,15 +29,11 @@
     </div>
   </mat-sidenav>
 
-  <mat-sidenav-content class="main-content" [class.loading]="isLoading">
+  <mat-sidenav-content class="main-content">
     
-    <!-- Top Navbar inside main content -->
     <app-navbar></app-navbar>
     
-    <!-- Loader Overlay -->
-    <div class="loader-overlay" *ngIf="isLoading">
-      <mat-spinner diameter="60"></mat-spinner>
-    </div>
+
     
     <div class="dashboard-body">
       <div class="page-header">
@@ -64,7 +60,10 @@
         <mat-card class="stat-card">
           <mat-card-content>
             <div class="stat-label">Live Occupancy</div>
-            <div class="stat-value">{{ liveOccupancy }}</div>
+            <div class="stat-value" *ngIf="!isLiveOccupancyLoading">{{ liveOccupancy === 0 ? '--' : liveOccupancy }}</div>
+            <div class="stat-value" *ngIf="isLiveOccupancyLoading" style="display: flex; align-items: center; justify-content: center; min-height: 60px;">
+              <mat-spinner diameter="40"></mat-spinner>
+            </div>
             <div class="stat-trend" [ngClass]="occupancyTrend.direction">
               <mat-icon>{{ occupancyTrend.direction === 'up' ? 'trending_up' : 'trending_down' }}</mat-icon> 
               {{ occupancyTrend.percentage }}% {{ occupancyTrend.direction === 'up' ? 'More' : 'Less' }} than yesterday
@@ -75,8 +74,11 @@
         <mat-card class="stat-card">
           <mat-card-content>
             <div class="stat-label">Today's Footfall</div>
-            <div class="stat-value">{{ todaysFootfall | number }}</div>
-            <div class="stat-trend" [ngClass]="footfallTrend.direction">
+            <div class="stat-value" *ngIf="!isFootfallLoading">{{ todaysFootfall === 0 ? '--' : (todaysFootfall | number) }}</div>
+            <div class="stat-value" *ngIf="isFootfallLoading" style="display: flex; align-items: center; justify-content: center; min-height: 60px;">
+              <mat-spinner diameter="40"></mat-spinner>
+            </div>
+            <div class="stat-trend" [ngClass]="footfallTrend.direction" *ngIf="!isFootfallLoading">
               <mat-icon>{{ footfallTrend.direction === 'up' ? 'trending_up' : 'trending_down' }}</mat-icon> 
               {{ footfallTrend.percentage }}% {{ footfallTrend.direction === 'up' ? 'More' : 'Less' }} than yesterday
             </div>
@@ -86,8 +88,11 @@
         <mat-card class="stat-card">
           <mat-card-content>
             <div class="stat-label">Avg Dwell Time</div>
-            <div class="stat-value">{{ avgDwellTime }}</div>
-            <div class="stat-trend" [ngClass]="dwellTimeTrend.direction">
+            <div class="stat-value" *ngIf="!isDwellTimeLoading">{{ avgDwellTime }}</div>
+            <div class="stat-value" *ngIf="isDwellTimeLoading" style="display: flex; align-items: center; justify-content: center; min-height: 60px;">
+              <mat-spinner diameter="40"></mat-spinner>
+            </div>
+            <div class="stat-trend" [ngClass]="dwellTimeTrend.direction" *ngIf="!isDwellTimeLoading">
               <mat-icon>{{ dwellTimeTrend.direction === 'up' ? 'trending_up' : 'trending_down' }}</mat-icon> 
               {{ dwellTimeTrend.percentage }}% {{ dwellTimeTrend.direction === 'up' ? 'More' : 'Less' }} than yesterday
             </div>
@@ -173,5 +178,4 @@
   </mat-sidenav-content>
 </mat-sidenav-container>
 
-<!-- Alerts Sidebar -->
 <app-alerts-sidebar></app-alerts-sidebar>
